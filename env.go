@@ -139,7 +139,7 @@ func (e *Env) getNeighbor(c *Cell, dir int) *Cell {
     return e.GetCell(x, y)
 }
 
-func (e *Env) process(exec, inflow <-chan int64, dts chan<- *Delta) {
+func (e *Env) process(exec, inflow <-chan bool, dts chan<- *Delta) {
     ctx := newContext(e)
     for {
         select {
@@ -154,8 +154,8 @@ func (e *Env) process(exec, inflow <-chan int64, dts chan<- *Delta) {
 }
 
 func (e *Env) Run(processN int, tick time.Duration, deltas chan<- *Delta) {
-    exec := make(chan int64)
-    inflow := make(chan int64)
+    exec := make(chan bool)
+    inflow := make(chan bool)
     dts := make(chan *Delta, processN)
 
     for i := 0; i < processN; i++ {
@@ -183,13 +183,13 @@ func (e *Env) Run(processN int, tick time.Duration, deltas chan<- *Delta) {
     defer close(inflow)
     defer close(exec)
 
-    inflow <- e.clock
+    inflow <- true
 
     for range time.Tick(tick) {
         e.clock++
         if e.clock % e.GetConfig().InflowFrequency == 0 {
-            inflow <- e.clock
+            inflow <- true
         }
-        exec <- e.clock
+        exec <- true
     }
 }
