@@ -24,6 +24,7 @@ type Env struct {
     cellsBuf []int32
     liveCells map[int32]bool
 
+    run chan bool
     nextCellID chan int64
 }
 
@@ -59,6 +60,7 @@ func NewEnv(width, height, genomeSize, pop int32, seed int64) *Env {
         cells: make([]*Cell, width * height),
         cellsBuf: make([]int32, width * height),
         liveCells: make(map[int32]bool),
+        run: make(chan bool),
         nextCellID: make(chan int64),
     }
 
@@ -197,8 +199,12 @@ func (e *Env) getNeighbor(c *Cell, dir int) *Cell {
     return e.GetCell(x, y)
 }
 
-func (e *Env) process(exec <-chan bool, inflow chan bool, dts chan<- *Delta) {
+func (e *Env) process(wg *sync.WaitGroup, exec <-chan bool, inflow chan bool,
+    dts chan<- *Delta) {
+    defer wg.Done()
+
     ctx := newContext(e)
+
     for {
         select {
         case <-inflow:
@@ -211,7 +217,10 @@ func (e *Env) process(exec <-chan bool, inflow chan bool, dts chan<- *Delta) {
                 c = e.getRandomCell(ctx)
             }
             dts <- c.seed(ctx)
-        case <-exec:
+        case _, ok := <-exec:
+            if !ok {
+                return
+            }
             if c := e.getRandomLiveCell(ctx); c != nil {
                 dts <- c.exec(ctx)
             } else {
@@ -228,8 +237,11 @@ func (e *Env) Run(processN int, tick time.Duration, deltas chan<- *Delta) {
     inflow := make(chan bool)
     dts := make(chan *Delta, processN)
 
+    var wg sync.WaitGroup
+    wg.Add(processN)
+
     for i := 0; i < processN; i++ {
-        go e.process(exec, inflow, dts)
+        go e.process(&wg, exec, inflow, dts)
     }
 
     go func() {
@@ -242,7 +254,6 @@ func (e *Env) Run(processN int, tick time.Duration, deltas chan<- *Delta) {
     }()
 
     defer close(inflow)
-    defer close(exec)
     defer close(dts)
     defer close(deltas)
 
@@ -255,9 +266,15 @@ func (e *Env) Run(processN int, tick time.Duration, deltas chan<- *Delta) {
     defer ticker.Stop()
 
     inflowTick := e.GetConfig().InflowFrequency
+    running := true
 
-    for {
+    for running {
         select {
+        case _, ok := <-e.run:
+            if !ok {
+                close(exec)
+                running = false
+            }
         case <-ticker.C:
             inflowTick--
             if inflowTick == 0 {
@@ -270,4 +287,10 @@ func (e *Env) Run(processN int, tick time.Duration, deltas chan<- *Delta) {
             deltas <- dt
         }
     }
+
+    wg.Wait()
+}
+
+func (e *Env) Stop() {
+    close(e.run)
 }
