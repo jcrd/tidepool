@@ -14,6 +14,8 @@ type Env struct {
     GenomeSize int32
     Seed int64
 
+    initPop int32
+
     config atomic.Value
     rng atomic.Value
 
@@ -44,12 +46,13 @@ var defaultConfig = Config{
     FailedKillPenalty: 3,
 }
 
-func NewEnv(width, height, genomeSize int32, seed int64) *Env {
+func NewEnv(width, height, genomeSize, pop int32, seed int64) *Env {
     e := &Env{
         Width: width,
         Height: height,
         GenomeSize: genomeSize,
         Seed: seed,
+        initPop: pop,
         mutex: &sync.RWMutex{},
         cells: make([]*Cell, width * height),
         liveCellsBuf: make([]int32, width * height),
@@ -218,6 +221,11 @@ func (e *Env) Run(processN int, tick time.Duration, deltas chan<- *Delta) {
 
     defer close(inflow)
     defer close(exec)
+
+    for e.initPop > 0 {
+        inflow <- true
+        e.initPop--
+    }
 
     inflowTick := e.GetConfig().InflowFrequency
 
