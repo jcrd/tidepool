@@ -104,7 +104,7 @@ func (e *Env) getNextCellID() int64 {
 func (e *Env) applyDelta(dt *Delta) {
     e.mutex.Lock()
     for _, c := range dt.Cells {
-        if c.Energy > 0 {
+        if c.live() {
             e.liveCells[c.idx] = true
         } else {
             delete(e.liveCells, c.idx)

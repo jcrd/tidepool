@@ -179,6 +179,10 @@ func (vm *VM) execGene(c *Cell, g gene.Gene, dt *Delta) int {
             n.Energy = e / 2
             c.Energy = e - n.Energy
 
+            if n.ID == 0 {
+                n.resetID(ctx)
+            }
+
             vm.addCell(dt, n)
 
             if n.Generation >= config.ViableCellGeneration {

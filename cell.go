@@ -84,21 +84,33 @@ func (c *Cell) logo() gene.Gene {
     return c.Genome[0]
 }
 
+func (c *Cell) live() bool {
+    return c.Energy > 0
+}
+
 func (c *Cell) exec(ctx *Context) *Delta {
     return ctx.vm.exec(c)
 }
 
 func (c *Cell) resetMetadata(ctx *Context) {
-    c.ID = ctx.env.getNextCellID()
-    c.Origin = c.ID
+    c.resetID(ctx)
     c.Parent = 0
     c.Generation = 0
 }
 
+func (c *Cell) resetID(ctx *Context) {
+    if c.live() {
+        c.ID = ctx.env.getNextCellID()
+    } else {
+        c.ID = 0
+    }
+    c.Origin = c.ID
+}
+
 func (c *Cell) seed(ctx *Context) *Delta {
+    c.Energy += ctx.env.GetRNG().Energy(ctx)
     c.resetMetadata(ctx)
     c.randomizeGenome(ctx)
-    c.Energy += ctx.env.GetRNG().Energy(ctx)
 
     dt := newDelta()
     dt.Cells = append(dt.Cells, c)
