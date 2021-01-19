@@ -45,6 +45,7 @@ func (r DefaultRNG) CellAccessible(ctx *Context, c *Cell,
 
     switch mode {
     case gene.KILL:
+        fallthrough
     case gene.STOP:
         return i <= b
     case gene.SHARE:
