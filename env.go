@@ -241,31 +241,33 @@ func (e *Env) Run(processN int, tick time.Duration, deltas chan<- *Delta) {
         }
     }()
 
-    go func() {
-        defer close(dts)
-        defer close(deltas)
-        for dt := range dts {
-            e.applyDelta(dt)
-            deltas <- dt
-        }
-    }()
-
     defer close(inflow)
     defer close(exec)
+    defer close(dts)
+    defer close(deltas)
 
     for e.initPop > 0 {
         inflow <- true
         e.initPop--
     }
 
+    ticker := time.NewTicker(tick)
+    defer ticker.Stop()
+
     inflowTick := e.GetConfig().InflowFrequency
 
-    for range time.Tick(tick) {
-        inflowTick--
-        if inflowTick == 0 {
-            inflow <- true
-            inflowTick = e.GetConfig().InflowFrequency
+    for {
+        select {
+        case <-ticker.C:
+            inflowTick--
+            if inflowTick == 0 {
+                inflow <- true
+                inflowTick = e.GetConfig().InflowFrequency
+            }
+            exec <- true
+        case dt := <-dts:
+            e.applyDelta(dt)
+            deltas <- dt
         }
-        exec <- true
     }
 }
