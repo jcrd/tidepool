@@ -19,6 +19,8 @@ type Env struct {
 
     mutex *sync.RWMutex
     cells []*Cell
+    liveCellsBuf []int32
+    liveCells map[int32]bool
 
     clock int64
 
@@ -39,7 +41,7 @@ const (
 )
 
 var defaultConfig = Config{
-    InflowFrequency: 100,
+    InflowFrequency: 10,
     ViableCellGeneration: 3,
     FailedKillPenalty: 3,
 }
@@ -52,6 +54,8 @@ func NewEnv(width, height, genomeSize int32, seed int64) *Env {
         Seed: seed,
         mutex: &sync.RWMutex{},
         cells: make([]*Cell, width * height),
+        liveCellsBuf: make([]int32, width * height),
+        liveCells: make(map[int32]bool),
         nextCellID: make(chan int64),
     }
 
@@ -95,6 +99,11 @@ func (e *Env) getNextCellID() int64 {
 func (e *Env) applyDelta(dt *Delta) {
     e.mutex.Lock()
     for _, c := range dt.Cells {
+        if c.Energy > 0 {
+            e.liveCells[c.idx] = true
+        } else {
+            delete(e.liveCells, c.idx)
+        }
         e.cells[c.idx] = c.clone()
     }
     e.mutex.Unlock()
@@ -104,6 +113,31 @@ func (e *Env) GetCell(x, y int32) *Cell {
     e.mutex.RLock()
     defer e.mutex.RUnlock()
     return e.cells[x + e.Width * y].clone()
+}
+
+func (e *Env) getRandomCell(ctx *Context) *Cell {
+    x := ctx.rand.Int31n(ctx.env.Width)
+    y := ctx.rand.Int31n(ctx.env.Height)
+    return e.GetCell(x, y)
+}
+
+func (e *Env) getRandomLiveCell(ctx *Context) *Cell {
+    e.mutex.RLock()
+    defer e.mutex.RUnlock()
+
+    i := 0
+    for idx := range e.liveCells {
+        e.liveCellsBuf[i] = idx
+        i++
+    }
+
+    if i == 0 {
+        return nil
+    }
+
+    c := e.liveCellsBuf[ctx.rand.Intn(i)]
+
+    return e.cells[c].clone()
 }
 
 func (e *Env) getNeighbor(c *Cell, dir int) *Cell {
@@ -139,15 +173,19 @@ func (e *Env) getNeighbor(c *Cell, dir int) *Cell {
     return e.GetCell(x, y)
 }
 
-func (e *Env) process(exec, inflow <-chan bool, dts chan<- *Delta) {
+func (e *Env) process(exec <-chan bool, inflow chan bool, dts chan<- *Delta) {
     ctx := newContext(e)
     for {
         select {
         case <-inflow:
-            dts <- ctx.getRandomCell().seed(ctx)
+            dts <- e.getRandomCell(ctx).seed(ctx)
         case <-exec:
-            if dt := ctx.getRandomCell().exec(ctx); dt != nil {
-                dts <- dt
+            if c := e.getRandomLiveCell(ctx); c != nil {
+                dts <- c.exec(ctx)
+            } else {
+                go func() {
+                    inflow <- true
+                }()
             }
         }
     }
@@ -182,8 +220,6 @@ func (e *Env) Run(processN int, tick time.Duration, deltas chan<- *Delta) {
 
     defer close(inflow)
     defer close(exec)
-
-    inflow <- true
 
     for range time.Tick(tick) {
         e.clock++

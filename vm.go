@@ -193,10 +193,6 @@ func (vm *VM) execGene(c *Cell, g gene.Gene, dt *Delta) int {
 }
 
 func (vm *VM) exec(c *Cell) *Delta {
-    if c.Energy == 0 {
-        return nil
-    }
-
     ctx := vm.ctx
     env := ctx.env
 

@@ -24,12 +24,6 @@ func newContext(e *Env) *Context {
     return ctx
 }
 
-func (ctx *Context) getRandomCell() *Cell {
-    x := ctx.rand.Int31n(ctx.env.Width)
-    y := ctx.rand.Int31n(ctx.env.Height)
-    return ctx.env.GetCell(x, y)
-}
-
 func (ctx *Context) getRandomGene() gene.Gene {
     return gene.Gene(ctx.rand.Intn(int(gene.N)))
 }
