@@ -22,8 +22,6 @@ type Env struct {
     liveCellsBuf []int32
     liveCells map[int32]bool
 
-    clock int64
-
     nextCellID chan int64
 }
 
@@ -221,10 +219,13 @@ func (e *Env) Run(processN int, tick time.Duration, deltas chan<- *Delta) {
     defer close(inflow)
     defer close(exec)
 
+    inflowTick := e.GetConfig().InflowFrequency
+
     for range time.Tick(tick) {
-        e.clock++
-        if e.clock % e.GetConfig().InflowFrequency == 0 {
+        inflowTick--
+        if inflowTick == 0 {
             inflow <- true
+            inflowTick = e.GetConfig().InflowFrequency
         }
         exec <- true
     }
