@@ -11,7 +11,18 @@ import (
     "time"
 
     "petri"
+
+    "github.com/eiannone/keyboard"
 )
+
+func printDelta(dt *petri.Delta) {
+    json, err := json.Marshal(dt)
+    if err != nil {
+        fmt.Fprintln(os.Stderr, err)
+        os.Exit(1)
+    }
+    fmt.Println(string(json))
+}
 
 func main() {
     w := flag.Int("width", 256, "Environment width")
@@ -30,12 +41,31 @@ func main() {
 
     go env.Run(runtime.NumCPU(), *t, dts)
 
-    for dt := range dts {
-        json, err := json.Marshal(dt)
-        if err != nil {
-            fmt.Fprintln(os.Stderr, err)
-            os.Exit(1)
+    keyEvents, err := keyboard.GetKeys(1)
+    if err != nil {
+        fmt.Fprintln(os.Stderr, "keyboard: failed to initialize")
+        os.Exit(1)
+    }
+    defer keyboard.Close()
+
+    for {
+        select {
+        case ev := <-keyEvents:
+            if ev.Err != nil {
+                fmt.Fprintf(os.Stderr, "keyboard: %s\n", ev.Err)
+                break
+            }
+            switch ev.Key {
+            case keyboard.KeyEsc:
+                fallthrough
+            case keyboard.KeyCtrlC:
+                env.Stop()
+            }
+        case dt, ok := <-dts:
+            if !ok {
+                return
+            }
+            printDelta(dt)
         }
-        fmt.Println(string(json))
     }
 }
