@@ -21,7 +21,7 @@ type Env struct {
 
     mutex *sync.RWMutex
     cells []*Cell
-    liveCellsBuf []int32
+    cellsBuf []int32
     liveCells map[int32]bool
 
     nextCellID chan int64
@@ -31,6 +31,7 @@ type Config struct {
     InflowFrequency int64
     ViableCellGeneration int64
     FailedKillPenalty int
+    SeedLiveCells bool
 }
 
 const (
@@ -44,6 +45,7 @@ var defaultConfig = Config{
     InflowFrequency: 10,
     ViableCellGeneration: 3,
     FailedKillPenalty: 3,
+    SeedLiveCells: false,
 }
 
 func NewEnv(width, height, genomeSize, pop int32, seed int64) *Env {
@@ -55,7 +57,7 @@ func NewEnv(width, height, genomeSize, pop int32, seed int64) *Env {
         initPop: pop,
         mutex: &sync.RWMutex{},
         cells: make([]*Cell, width * height),
-        liveCellsBuf: make([]int32, width * height),
+        cellsBuf: make([]int32, width * height),
         liveCells: make(map[int32]bool),
         nextCellID: make(chan int64),
     }
@@ -128,7 +130,7 @@ func (e *Env) getRandomLiveCell(ctx *Context) *Cell {
 
     i := 0
     for idx := range e.liveCells {
-        e.liveCellsBuf[i] = idx
+        e.cellsBuf[i] = idx
         i++
     }
 
@@ -136,7 +138,28 @@ func (e *Env) getRandomLiveCell(ctx *Context) *Cell {
         return nil
     }
 
-    c := e.liveCellsBuf[ctx.rand.Intn(i)]
+    c := e.cellsBuf[ctx.rand.Intn(i)]
+
+    return e.cells[c].clone()
+}
+
+func (e *Env) getRandomDeadCell(ctx *Context) *Cell {
+    e.mutex.RLock()
+    defer e.mutex.RUnlock()
+
+    i := 0
+    for _, c := range e.cells {
+        if _, live := e.liveCells[c.idx]; !live {
+            e.cellsBuf[i] = c.idx
+            i++
+        }
+    }
+
+    if i == 0 {
+        return nil
+    }
+
+    c := e.cellsBuf[ctx.rand.Intn(i)]
 
     return e.cells[c].clone()
 }
@@ -179,7 +202,15 @@ func (e *Env) process(exec <-chan bool, inflow chan bool, dts chan<- *Delta) {
     for {
         select {
         case <-inflow:
-            dts <- e.getRandomCell(ctx).seed(ctx)
+            var c *Cell
+            if !e.GetConfig().SeedLiveCells {
+                if c = e.getRandomDeadCell(ctx); c == nil {
+                    break
+                }
+            } else {
+                c = e.getRandomCell(ctx)
+            }
+            dts <- c.seed(ctx)
         case <-exec:
             if c := e.getRandomLiveCell(ctx); c != nil {
                 dts <- c.exec(ctx)
