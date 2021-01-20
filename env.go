@@ -257,15 +257,15 @@ func (e *Env) Run(processN int, tick time.Duration, deltas chan<- *Delta) {
     defer close(dts)
     defer close(deltas)
 
-    for e.initPop > 0 {
-        inflow <- true
-        e.initPop--
-    }
-
     ticker := time.NewTicker(tick)
     defer ticker.Stop()
 
     inflowTick := e.GetConfig().InflowFrequency
+    sendInflow := func () {
+        inflow <- true
+        inflowTick = e.GetConfig().InflowFrequency
+    }
+
     running := true
 
     for running {
@@ -276,10 +276,13 @@ func (e *Env) Run(processN int, tick time.Duration, deltas chan<- *Delta) {
                 running = false
             }
         case <-ticker.C:
+            if e.initPop > 0 {
+                sendInflow()
+                e.initPop--
+            }
             inflowTick--
             if inflowTick == 0 {
-                inflow <- true
-                inflowTick = e.GetConfig().InflowFrequency
+                sendInflow()
             }
             exec <- true
         case dt := <-dts:
