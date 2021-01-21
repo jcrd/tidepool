@@ -12,12 +12,14 @@ type Context struct {
     env *Env
     rand *rand.Rand
     vm *VM
+    cellsBuf []int32
 }
 
 func newContext(e *Env) *Context {
     ctx := &Context{
         env: e,
         rand: rand.New(rand.NewSource(e.Seed)),
+        cellsBuf: make([]int32, e.Width * e.Height),
     }
     ctx.vm = newVM(ctx)
 

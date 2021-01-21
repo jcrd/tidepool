@@ -21,7 +21,6 @@ type Env struct {
 
     mutex *sync.RWMutex
     cells []*Cell
-    cellsBuf []int32
     liveCells map[int32]bool
 
     run chan bool
@@ -58,7 +57,6 @@ func NewEnv(width, height, genomeSize, pop int32, seed int64) *Env {
         initPop: pop,
         mutex: &sync.RWMutex{},
         cells: make([]*Cell, width * height),
-        cellsBuf: make([]int32, width * height),
         liveCells: make(map[int32]bool),
         run: make(chan bool),
         nextCellID: make(chan int64),
@@ -132,7 +130,7 @@ func (e *Env) getRandomLiveCell(ctx *Context) *Cell {
 
     i := 0
     for idx := range e.liveCells {
-        e.cellsBuf[i] = idx
+        ctx.cellsBuf[i] = idx
         i++
     }
 
@@ -140,7 +138,7 @@ func (e *Env) getRandomLiveCell(ctx *Context) *Cell {
         return nil
     }
 
-    c := e.cellsBuf[ctx.rand.Intn(i)]
+    c := ctx.cellsBuf[ctx.rand.Intn(i)]
 
     return e.cells[c].clone()
 }
@@ -152,7 +150,7 @@ func (e *Env) getRandomDeadCell(ctx *Context) *Cell {
     i := 0
     for _, c := range e.cells {
         if _, live := e.liveCells[c.idx]; !live {
-            e.cellsBuf[i] = c.idx
+            ctx.cellsBuf[i] = c.idx
             i++
         }
     }
@@ -161,7 +159,7 @@ func (e *Env) getRandomDeadCell(ctx *Context) *Cell {
         return nil
     }
 
-    c := e.cellsBuf[ctx.rand.Intn(i)]
+    c := ctx.cellsBuf[ctx.rand.Intn(i)]
 
     return e.cells[c].clone()
 }
