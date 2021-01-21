@@ -2,6 +2,10 @@
 
 package gene
 
+import (
+    "encoding/json"
+)
+
 type Gene int
 type Genome []Gene
 
@@ -71,4 +75,8 @@ func (g Genome) String() string {
         s += gene.String()
     }
     return s
+}
+
+func (g Genome) MarshalJSON() ([]byte, error) {
+    return json.Marshal(g.String())
 }
