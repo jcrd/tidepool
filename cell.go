@@ -8,8 +8,6 @@ import (
 
 const genomeStartIdx = 1
 
-type Genome []gene.Gene
-
 type Cell struct {
     idx int32
     ID int64
@@ -19,7 +17,7 @@ type Cell struct {
     Energy int
     X int32
     Y int32
-    Genome Genome
+    Genome gene.Genome
 }
 
 type Stats struct {
@@ -38,7 +36,7 @@ func newCell(idx, x, y, g int32) *Cell {
         idx: idx,
         X: x,
         Y: y,
-        Genome: make(Genome, g),
+        Genome: make(gene.Genome, g),
     }
     c.resetGenome()
 

@@ -25,7 +25,7 @@ type VM struct {
     pointer int32
     register gene.Gene
     direction int
-    buffer Genome
+    buffer gene.Genome
 
     cellN []int
 }
@@ -37,7 +37,7 @@ func newVM(ctx *Context) *VM {
     vm := &VM{
         ctx: ctx,
         genomeMaxIdx: gs - 1,
-        buffer: make(Genome, gs),
+        buffer: make(gene.Genome, gs),
         loopStack: make([]int32, gs),
         cellN: make([]int, env.Width * env.Height),
     }

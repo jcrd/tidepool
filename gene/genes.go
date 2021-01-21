@@ -3,6 +3,7 @@
 package gene
 
 type Gene int
+type Genome []Gene
 
 const (
     ZERO Gene = iota
