@@ -64,3 +64,11 @@ func (g Gene) String() string {
         return ""
     }
 }
+
+func (g Genome) String() string {
+    var s string
+    for _, gene := range g {
+        s += gene.String()
+    }
+    return s
+}
