@@ -35,9 +35,9 @@ func (g Gene) String() string {
     case ZERO:
         return "0"
     case FWD:
-        return ">"
+        return "}"
     case BACK:
-        return "<"
+        return "{"
     case INC:
         return "+"
     case DEC:
