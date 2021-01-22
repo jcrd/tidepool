@@ -22,6 +22,7 @@ type Env struct {
     mutex *sync.RWMutex
     cells []*Cell
     liveCells map[int32]bool
+    execCells map[int32]bool
 
     run chan bool
     nextCellID chan int64
@@ -41,6 +42,12 @@ const (
     DIR_DOWN
 )
 
+const (
+    CELL_DEAD int = iota
+    CELL_LIVE
+    CELL_ANY
+)
+
 var defaultConfig = Config{
     InflowFrequency: 10,
     ViableCellGeneration: 3,
@@ -58,6 +65,7 @@ func NewEnv(width, height, genomeSize, pop int32, seed int64) *Env {
         mutex: &sync.RWMutex{},
         cells: make([]*Cell, width * height),
         liveCells: make(map[int32]bool),
+        execCells: make(map[int32]bool),
         run: make(chan bool),
         nextCellID: make(chan int64),
     }
@@ -108,6 +116,7 @@ func (e *Env) applyDelta(dt *Delta) {
             delete(e.liveCells, c.idx)
         }
         e.cells[c.idx] = c.clone()
+        delete(e.execCells, c.idx)
     }
     e.mutex.Unlock()
 }
@@ -118,50 +127,51 @@ func (e *Env) GetCell(x, y int32) *Cell {
     return e.cells[x + e.Width * y].clone()
 }
 
-func (e *Env) getRandomCell(ctx *Context) *Cell {
-    x := ctx.rand.Int31n(ctx.env.Width)
-    y := ctx.rand.Int31n(ctx.env.Height)
-    return e.GetCell(x, y)
-}
-
-func (e *Env) getRandomLiveCell(ctx *Context) *Cell {
-    e.mutex.RLock()
-    defer e.mutex.RUnlock()
-
-    i := 0
-    for idx := range e.liveCells {
-        ctx.cellsBuf[i] = idx
-        i++
+func (e *Env) getRandomCell(ctx *Context, state int) *Cell {
+    fillBuf := func(idx int32, live bool, i *int) {
+        if _, exec := e.execCells[idx]; exec {
+            return
+        }
+        if !live {
+            if _, live = e.liveCells[idx]; live {
+                return
+            }
+        }
+        ctx.cellsBuf[*i] = idx
+        *i++
     }
 
-    if i == 0 {
-        return nil
-    }
-
-    c := ctx.cellsBuf[ctx.rand.Intn(i)]
-
-    return e.cells[c].clone()
-}
-
-func (e *Env) getRandomDeadCell(ctx *Context) *Cell {
-    e.mutex.RLock()
-    defer e.mutex.RUnlock()
-
     i := 0
-    for _, c := range e.cells {
-        if _, live := e.liveCells[c.idx]; !live {
-            ctx.cellsBuf[i] = c.idx
-            i++
+    e.mutex.RLock()
+
+    switch state {
+    case CELL_DEAD:
+        for _, c := range e.cells {
+            fillBuf(c.idx, false, &i)
+        }
+    case CELL_LIVE:
+        for idx := range e.liveCells {
+            fillBuf(idx, true, &i)
+        }
+    case CELL_ANY:
+        for _, c := range e.cells {
+            fillBuf(c.idx, false, &i)
         }
     }
 
     if i == 0 {
+        e.mutex.RUnlock()
         return nil
     }
 
-    c := ctx.cellsBuf[ctx.rand.Intn(i)]
+    c := e.cells[ctx.cellsBuf[ctx.rand.Intn(i)]].clone()
+    e.mutex.RUnlock()
 
-    return e.cells[c].clone()
+    e.mutex.Lock()
+    e.execCells[c.idx] = true
+    e.mutex.Unlock()
+
+    return c
 }
 
 func (e *Env) getNeighbor(c *Cell, dir int) *Cell {
@@ -208,18 +218,18 @@ func (e *Env) process(wg *sync.WaitGroup, exec <-chan bool, inflow chan bool,
         case <-inflow:
             var c *Cell
             if !e.GetConfig().SeedLiveCells {
-                if c = e.getRandomDeadCell(ctx); c == nil {
+                if c = e.getRandomCell(ctx, CELL_DEAD); c == nil {
                     break
                 }
             } else {
-                c = e.getRandomCell(ctx)
+                c = e.getRandomCell(ctx, CELL_ANY)
             }
             dts <- c.seed(ctx)
         case _, ok := <-exec:
             if !ok {
                 return
             }
-            if c := e.getRandomLiveCell(ctx); c != nil {
+            if c := e.getRandomCell(ctx, CELL_LIVE); c != nil {
                 dts <- c.exec(ctx)
             } else {
                 go func() {
