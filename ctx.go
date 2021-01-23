@@ -13,6 +13,7 @@ type Context struct {
     rand *rand.Rand
     vm *VM
     cellsBuf []int32
+    dedupBuf []*Cell
 }
 
 func newContext(e *Env) *Context {
@@ -20,6 +21,7 @@ func newContext(e *Env) *Context {
         env: e,
         rand: rand.New(rand.NewSource(e.Seed)),
         cellsBuf: make([]int32, e.Width * e.Height),
+        dedupBuf: make([]*Cell, 0),
     }
     ctx.vm = newVM(ctx)
 

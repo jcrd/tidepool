@@ -77,16 +77,20 @@ func (vm *VM) addCell(dt *Delta, c *Cell) {
 }
 
 func (vm *VM) dedupCells(dt *Delta) {
-    cs := make([]*Cell, 0)
+    ctx := vm.ctx
 
     for _, c := range dt.Cells {
         vm.cellN[c.idx]--
         if vm.cellN[c.idx] == 0 {
-            cs = append(cs, c)
+            ctx.dedupBuf = append(ctx.dedupBuf, c)
         }
     }
+    dt.Cells = dt.Cells[:0]
 
-    dt.Cells = cs
+    for _, c := range ctx.dedupBuf {
+        dt.Cells = append(dt.Cells, c)
+    }
+    ctx.dedupBuf = ctx.dedupBuf[:0]
 }
 
 func (vm *VM) execGene(c *Cell, g gene.Gene, dt *Delta) int {
