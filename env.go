@@ -111,12 +111,12 @@ func (e *Env) applyDelta(dt *Delta) {
     e.mutex.Lock()
     for _, c := range dt.Cells {
         if c.live() {
-            e.liveCells[c.idx] = true
+            e.liveCells[c.Idx] = true
         } else {
-            delete(e.liveCells, c.idx)
+            delete(e.liveCells, c.Idx)
         }
-        e.cells[c.idx] = c.clone()
-        delete(e.execCells, c.idx)
+        e.cells[c.Idx] = c.clone()
+        delete(e.execCells, c.Idx)
     }
     e.mutex.Unlock()
 }
@@ -153,7 +153,7 @@ func (e *Env) getRandomCell(ctx *Context, state int) *Cell {
     switch state {
     case CELL_DEAD:
         for _, c := range e.cells {
-            fillBuf(c.idx, false, &i)
+            fillBuf(c.Idx, false, &i)
         }
     case CELL_LIVE:
         for idx := range e.liveCells {
@@ -161,7 +161,7 @@ func (e *Env) getRandomCell(ctx *Context, state int) *Cell {
         }
     case CELL_ANY:
         for _, c := range e.cells {
-            fillBuf(c.idx, false, &i)
+            fillBuf(c.Idx, false, &i)
         }
     }
 
@@ -174,7 +174,7 @@ func (e *Env) getRandomCell(ctx *Context, state int) *Cell {
     e.mutex.RUnlock()
 
     e.mutex.Lock()
-    e.execCells[c.idx] = true
+    e.execCells[c.Idx] = true
     e.mutex.Unlock()
 
     return c

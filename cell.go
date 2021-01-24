@@ -9,7 +9,7 @@ import (
 const genomeStartIdx = 1
 
 type Cell struct {
-    idx int32
+    Idx int32 `json:"-"`
     ID int64
     Origin int64
     Parent int64
@@ -33,7 +33,7 @@ type Delta struct {
 
 func newCell(idx, x, y, g int32) *Cell {
     c := &Cell{
-        idx: idx,
+        Idx: idx,
         X: x,
         Y: y,
         Genome: make(gene.Genome, g),
@@ -51,7 +51,7 @@ func newDelta() *Delta {
 }
 
 func (dt *Delta) addCell(c *Cell) {
-    dt.Cells[c.idx] = c
+    dt.Cells[c.Idx] = c
 }
 
 func (dt *Delta) getCell(e *Env, idx int32) *Cell {
@@ -75,7 +75,7 @@ func (c *Cell) resetGenome() {
 }
 
 func (c *Cell) clone() *Cell {
-    n := newCell(c.idx, c.X, c.Y, int32(len(c.Genome)))
+    n := newCell(c.Idx, c.X, c.Y, int32(len(c.Genome)))
 
     n.ID = c.ID
     n.Origin = c.Origin
