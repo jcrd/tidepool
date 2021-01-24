@@ -27,7 +27,7 @@ type Stats struct {
 }
 
 type Delta struct {
-    Cells []*Cell
+    Cells map[int32]*Cell
     Stats Stats
 }
 
@@ -45,9 +45,21 @@ func newCell(idx, x, y, g int32) *Cell {
 
 func newDelta() *Delta {
     return &Delta{
-        Cells: make([]*Cell, 0),
+        Cells: make(map[int32]*Cell),
         Stats: Stats{},
     }
+}
+
+func (dt *Delta) addCell(c *Cell) {
+    dt.Cells[c.idx] = c
+}
+
+func (dt *Delta) getCell(e *Env, idx int32) *Cell {
+    c, ok := dt.Cells[idx]
+    if !ok {
+        c = e.GetCellByIdx(idx)
+    }
+    return c
 }
 
 func (c *Cell) randomizeGenome(ctx *Context) {
@@ -111,7 +123,7 @@ func (c *Cell) seed(ctx *Context) *Delta {
     c.randomizeGenome(ctx)
 
     dt := newDelta()
-    dt.Cells = append(dt.Cells, c)
+    dt.addCell(c)
 
     return dt
 }

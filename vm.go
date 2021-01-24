@@ -26,8 +26,6 @@ type VM struct {
     register gene.Gene
     direction int
     buffer gene.Genome
-
-    cellN []int
 }
 
 func newVM(ctx *Context) *VM {
@@ -39,7 +37,6 @@ func newVM(ctx *Context) *VM {
         genomeMaxIdx: gs - 1,
         buffer: make(gene.Genome, gs),
         loopStack: make([]int32, gs),
-        cellN: make([]int, env.Width * env.Height),
     }
     vm.reset()
 
@@ -57,10 +54,6 @@ func (vm *VM) reset() {
     for i := range vm.buffer {
         vm.buffer[i] = gene.STOP
     }
-
-    for i := range vm.cellN {
-        vm.cellN[i] = 0
-    }
 }
 
 func (vm *VM) incGenomeIdx() {
@@ -69,28 +62,6 @@ func (vm *VM) incGenomeIdx() {
     } else {
         vm.genomeIdx++
     }
-}
-
-func (vm *VM) addCell(dt *Delta, c *Cell) {
-    dt.Cells = append(dt.Cells, c)
-    vm.cellN[c.idx]++
-}
-
-func (vm *VM) dedupCells(dt *Delta) {
-    ctx := vm.ctx
-
-    for _, c := range dt.Cells {
-        vm.cellN[c.idx]--
-        if vm.cellN[c.idx] == 0 {
-            ctx.dedupBuf = append(ctx.dedupBuf, c)
-        }
-    }
-    dt.Cells = dt.Cells[:0]
-
-    for _, c := range ctx.dedupBuf {
-        dt.Cells = append(dt.Cells, c)
-    }
-    ctx.dedupBuf = ctx.dedupBuf[:0]
 }
 
 func (vm *VM) execGene(c *Cell, g gene.Gene, dt *Delta) int {
@@ -162,12 +133,13 @@ func (vm *VM) execGene(c *Cell, g gene.Gene, dt *Delta) int {
         c.Genome[vm.genomeIdx] = reg
     case gene.KILL:
         config := env.GetConfig()
-        n := env.getNeighbor(c, vm.direction)
+        idx := env.getNeighborIdx(c, vm.direction)
+        n := dt.getCell(env, idx)
         if n.accessible(ctx, vm.register, gene.KILL) {
             n.resetMetadata(ctx)
             n.resetGenome()
 
-            vm.addCell(dt, n)
+            dt.addCell(n)
 
             if n.Generation >= config.ViableCellGeneration {
                 dt.Stats.ViableCellKilled++
@@ -177,7 +149,8 @@ func (vm *VM) execGene(c *Cell, g gene.Gene, dt *Delta) int {
         }
     case gene.SHARE:
         config := env.GetConfig()
-        n := env.getNeighbor(c, vm.direction)
+        idx := env.getNeighborIdx(c, vm.direction)
+        n := dt.getCell(env, idx)
         if n.accessible(ctx, vm.register, gene.SHARE) {
             e := c.Energy + n.Energy
             n.Energy = e / 2
@@ -187,7 +160,7 @@ func (vm *VM) execGene(c *Cell, g gene.Gene, dt *Delta) int {
                 n.resetID(ctx)
             }
 
-            vm.addCell(dt, n)
+            dt.addCell(n)
 
             if n.Generation >= config.ViableCellGeneration {
                 dt.Stats.ViableCellShared++
@@ -205,10 +178,9 @@ func (vm *VM) exec(c *Cell) *Delta {
     env := ctx.env
 
     dt := newDelta()
-    vm.addCell(dt, c)
+    dt.addCell(c)
 
     defer vm.reset()
-    defer vm.dedupCells(dt)
 
     for c.Energy > 0 {
         g := c.Genome[vm.genomeIdx]
@@ -245,7 +217,8 @@ func (vm *VM) exec(c *Cell) *Delta {
     }
 
     if vm.buffer[0] != gene.STOP {
-        n := env.getNeighbor(c, vm.direction)
+        idx := env.getNeighborIdx(c, vm.direction)
+        n := dt.getCell(env, idx)
         if n.Energy > 0 && n.accessible(ctx, vm.register, gene.STOP) {
             n.ID = env.getNextCellID()
             n.Parent = c.ID
@@ -256,7 +229,7 @@ func (vm *VM) exec(c *Cell) *Delta {
                 n.Genome[i] = g
             }
 
-            vm.addCell(dt, n)
+            dt.addCell(n)
         }
     }
 

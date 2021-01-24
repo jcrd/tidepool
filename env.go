@@ -127,6 +127,12 @@ func (e *Env) GetCell(x, y int32) *Cell {
     return e.cells[x + e.Width * y].clone()
 }
 
+func (e *Env) GetCellByIdx(idx int32) *Cell {
+    e.mutex.RLock()
+    defer e.mutex.RUnlock()
+    return e.cells[idx].clone()
+}
+
 func (e *Env) getRandomCell(ctx *Context, state int) *Cell {
     fillBuf := func(idx int32, live bool, i *int) {
         if _, exec := e.execCells[idx]; exec {
@@ -174,7 +180,7 @@ func (e *Env) getRandomCell(ctx *Context, state int) *Cell {
     return c
 }
 
-func (e *Env) getNeighbor(c *Cell, dir int) *Cell {
+func (e *Env) getNeighborIdx(c *Cell, dir int) int32 {
     x, y := c.X, c.Y
 
     switch dir {
@@ -204,7 +210,7 @@ func (e *Env) getNeighbor(c *Cell, dir int) *Cell {
         }
     }
 
-    return e.GetCell(x, y)
+    return x + e.Width * y
 }
 
 func (e *Env) process(wg *sync.WaitGroup, exec <-chan bool, inflow chan bool,
