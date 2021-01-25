@@ -3,6 +3,7 @@
 package petri
 
 import (
+    "context"
     "sync"
     "sync/atomic"
     "time"
@@ -24,8 +25,9 @@ type Env struct {
     liveCells map[int32]bool
     execCells map[int32]bool
 
-    run chan bool
     nextCellID chan int64
+
+    Stop context.CancelFunc
 }
 
 type Config struct {
@@ -66,7 +68,6 @@ func NewEnv(width, height, genomeSize, pop int32, seed int64) *Env {
         cells: make([]*Cell, width * height),
         liveCells: make(map[int32]bool),
         execCells: make(map[int32]bool),
-        run: make(chan bool),
         nextCellID: make(chan int64),
     }
 
@@ -213,14 +214,16 @@ func (e *Env) getNeighborIdx(c *Cell, dir int) int32 {
     return x + e.Width * y
 }
 
-func (e *Env) process(wg *sync.WaitGroup, exec <-chan bool, inflow chan bool,
-    dts chan<- *Delta) {
+func (e *Env) process(wg *sync.WaitGroup, context context.Context,
+    exec <-chan bool, inflow chan bool, dts chan<- *Delta) {
     defer wg.Done()
 
     ctx := newContext(e)
 
     for {
         select {
+        case <-context.Done():
+            return
         case <-inflow:
             var c *Cell
             if !e.GetConfig().SeedLiveCells {
@@ -231,10 +234,7 @@ func (e *Env) process(wg *sync.WaitGroup, exec <-chan bool, inflow chan bool,
                 c = e.getRandomCell(ctx, CELL_ANY)
             }
             dts <- c.seed(ctx)
-        case _, ok := <-exec:
-            if !ok {
-                return
-            }
+        case <-exec:
             if c := e.getRandomCell(ctx, CELL_LIVE); c != nil {
                 dts <- c.exec(ctx)
             } else {
@@ -251,19 +251,27 @@ func (e *Env) Run(processN int, tick time.Duration, deltas chan<- *Delta) {
     inflow := make(chan bool)
     dts := make(chan *Delta, processN)
 
+    context, stop := context.WithCancel(context.Background())
+    e.Stop = stop
+
     var wg sync.WaitGroup
     wg.Add(processN)
 
     for i := 0; i < processN; i++ {
-        go e.process(&wg, exec, inflow, dts)
+        go e.process(&wg, context, exec, inflow, dts)
     }
 
     go func() {
         defer close(e.nextCellID)
         var id int64 = 1
         for {
-            e.nextCellID <- id
-            id++
+            select {
+            case <-context.Done():
+                return
+            default:
+                e.nextCellID <- id
+                id++
+            }
         }
     }()
 
@@ -280,15 +288,12 @@ func (e *Env) Run(processN int, tick time.Duration, deltas chan<- *Delta) {
         inflowTick = e.GetConfig().InflowFrequency
     }
 
-    running := true
+    defer wg.Wait()
 
-    for running {
+    for {
         select {
-        case _, ok := <-e.run:
-            if !ok {
-                close(exec)
-                running = false
-            }
+        case <-context.Done():
+            return
         case <-ticker.C:
             if e.initPop > 0 {
                 sendInflow()
@@ -304,10 +309,4 @@ func (e *Env) Run(processN int, tick time.Duration, deltas chan<- *Delta) {
             deltas <- dt
         }
     }
-
-    wg.Wait()
-}
-
-func (e *Env) Stop() {
-    close(e.run)
 }
