@@ -144,6 +144,7 @@ func (vm *VM) execGene(c *Cell, g gene.Gene, dt *Delta) int {
             if n.Generation >= config.ViableCellGeneration {
                 dt.Stats.ViableCellKilled++
             }
+            dt.Stats.CellKilled++
         } else if n.Generation >= config.ViableCellGeneration {
             c.Energy -= c.Energy / config.FailedKillPenalty
         }
@@ -165,6 +166,7 @@ func (vm *VM) execGene(c *Cell, g gene.Gene, dt *Delta) int {
             if n.Generation >= config.ViableCellGeneration {
                 dt.Stats.ViableCellShared++
             }
+            dt.Stats.CellShared++
         }
     case gene.STOP:
         return VM_BREAK
