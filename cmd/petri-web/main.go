@@ -24,7 +24,7 @@ type Conn struct {
 }
 
 var (
-    indexTemp = template.Must(template.ParseFiles("index.html"))
+    indexTemp *template.Template
     upgrader = websocket.Upgrader{}
     conn = &Conn{
         mutex: &sync.RWMutex{},
@@ -93,9 +93,12 @@ func wsHandle(w http.ResponseWriter, r *http.Request) {
 func main() {
     u := flag.Duration("update", time.Second, "Stats update frequency")
     a := flag.String("addr", ":3000", "http service address")
+    index := flag.String("index", "index.html", "Path to html index file")
 
     env, dts := cmd.ParseAndRun()
     defer env.Stop()
+
+    indexTemp = template.Must(template.ParseFiles(*index))
 
     http.HandleFunc("/", indexHandle)
     http.HandleFunc("/ws", wsHandle)

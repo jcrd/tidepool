@@ -12,7 +12,10 @@ $(BUILDDIR)/petri-web: cmd/petri-web/main.go $(SRC)
 	mkdir -p $(BUILDDIR)
 	go build -o $@ $<
 
+run-petri-web: $(BUILDDIR)/petri-web
+	$(BUILDDIR)/petri-web -index cmd/petri-web/index.html
+
 clean:
 	rm -fr $(BUILDDIR)
 
-.PHONY: all clean
+.PHONY: all run-petri-web clean
