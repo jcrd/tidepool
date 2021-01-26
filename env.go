@@ -54,7 +54,7 @@ var defaultConfig = Config{
     InflowFrequency: 10,
     ViableCellGeneration: 3,
     FailedKillPenalty: 3,
-    SeedLiveCells: false,
+    SeedLiveCells: true,
 }
 
 func NewEnv(width, height, genomeSize, pop int32, seed int64) *Env {
