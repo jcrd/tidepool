@@ -1,6 +1,6 @@
 BUILDDIR ?= builddir
 
-SRC := gene/genes.go cell.go ctx.go env.go rng.go vm.go
+SRC := gene/genes.go cell.go ctx.go dt.go env.go rng.go stats.go vm.go
 
 all: $(BUILDDIR)/petri-json $(BUILDDIR)/petri-web
 

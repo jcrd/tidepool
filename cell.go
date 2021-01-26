@@ -20,19 +20,6 @@ type Cell struct {
     Genome gene.Genome
 }
 
-type Stats struct {
-    GeneExecN [gene.N]int
-    CellKilled int
-    CellShared int
-    ViableCellKilled int
-    ViableCellShared int
-}
-
-type Delta struct {
-    Cells map[int32]*Cell
-    Stats *Stats
-}
-
 func newCell(idx, x, y, g int32) *Cell {
     c := &Cell{
         Idx: idx,
@@ -43,35 +30,6 @@ func newCell(idx, x, y, g int32) *Cell {
     c.resetGenome()
 
     return c
-}
-
-func newDelta() *Delta {
-    return &Delta{
-        Cells: make(map[int32]*Cell),
-        Stats: &Stats{},
-    }
-}
-
-func (dt *Delta) addCell(c *Cell) {
-    dt.Cells[c.Idx] = c
-}
-
-func (dt *Delta) getCell(e *Env, idx int32) *Cell {
-    c, ok := dt.Cells[idx]
-    if !ok {
-        c = e.GetCellByIdx(idx)
-    }
-    return c
-}
-
-func (s *Stats) Add(a *Stats) {
-    for i := range a.GeneExecN {
-        s.GeneExecN[i] += a.GeneExecN[i]
-    }
-    s.CellKilled += a.CellKilled
-    s.CellShared += a.CellShared
-    s.ViableCellKilled += a.ViableCellKilled
-    s.ViableCellShared += a.ViableCellShared
 }
 
 func (c *Cell) randomizeGenome(ctx *Context) {
