@@ -141,6 +141,9 @@ func (vm *VM) execGene(c *Cell, g gene.Gene, dt *Delta) int {
 
             dt.addCell(n)
 
+            if n.Energy > 0 {
+                dt.Stats.inc("LiveCellsKilled", 1)
+            }
             if n.Generation >= config.ViableCellGeneration {
                 dt.Stats.inc("ViableCellsKilled", 1)
             }
@@ -194,6 +197,7 @@ func (vm *VM) exec(c *Cell) *Delta {
             } else {
                 vm.register = mut
             }
+            dt.Stats.inc("Mutations", 1)
         }
 
         c.Energy--
@@ -221,6 +225,9 @@ func (vm *VM) exec(c *Cell) *Delta {
     if vm.buffer[0] != gene.STOP {
         idx := env.getNeighborIdx(c, vm.direction)
         n := dt.getCell(env, idx)
+
+        dt.Stats.inc("ReproductionAttempts", 1)
+
         if n.Energy > 0 && n.accessible(ctx, vm.register, gene.STOP) {
             n.ID = env.getNextCellID()
             n.Parent = c.ID
@@ -232,7 +239,14 @@ func (vm *VM) exec(c *Cell) *Delta {
             }
 
             dt.addCell(n)
+
+            dt.Stats.inc("Reproductions", 1)
+            dt.Stats.update("MaxGeneration", n.Generation)
         }
+    }
+
+    if c.Energy == 0 {
+        dt.Stats.inc("NaturalDeaths", 1)
     }
 
     return dt

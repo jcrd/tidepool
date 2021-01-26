@@ -23,6 +23,12 @@ func (s *Stats) inc(name string, i int64) {
     s.ByName[name] = i
 }
 
+func (s *Stats) update(name string, i int64) {
+    if max, ok := s.ByName[name]; !ok || i > max {
+        s.ByName[name] = i
+    }
+}
+
 func (s *Stats) Add(a *Stats) {
     if a.Ticks > s.Ticks {
         s.Ticks = a.Ticks
@@ -31,6 +37,11 @@ func (s *Stats) Add(a *Stats) {
         s.GeneExecN[i] += a.GeneExecN[i]
     }
     for n, i := range a.ByName {
-        s.inc(n, i)
+        switch n {
+        case "MaxGeneration":
+            s.update(n, i)
+        default:
+            s.inc(n, i)
+        }
     }
 }
