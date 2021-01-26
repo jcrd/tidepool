@@ -215,7 +215,7 @@ func (e *Env) getNeighborIdx(c *Cell, dir int) int32 {
 }
 
 func (e *Env) process(wg *sync.WaitGroup, context context.Context,
-    exec <-chan bool, inflow chan bool, dts chan<- *Delta) {
+    exec <-chan int64, inflow chan int64, dts chan<- *Delta) {
     defer wg.Done()
 
     ctx := newContext(e)
@@ -224,7 +224,7 @@ func (e *Env) process(wg *sync.WaitGroup, context context.Context,
         select {
         case <-context.Done():
             return
-        case <-inflow:
+        case ticks := <-inflow:
             var c *Cell
             if !e.GetConfig().SeedLiveCells {
                 if c = e.getRandomCell(ctx, CELL_DEAD); c == nil {
@@ -233,13 +233,17 @@ func (e *Env) process(wg *sync.WaitGroup, context context.Context,
             } else {
                 c = e.getRandomCell(ctx, CELL_ANY)
             }
-            dts <- c.seed(ctx)
-        case <-exec:
+            dt := c.seed(ctx)
+            dt.Stats.Ticks = ticks
+            dts <- dt
+        case ticks := <-exec:
             if c := e.getRandomCell(ctx, CELL_LIVE); c != nil {
-                dts <- c.exec(ctx)
+                dt := c.exec(ctx)
+                dt.Stats.Ticks = ticks
+                dts <- dt
             } else {
                 go func() {
-                    inflow <- true
+                    inflow <- ticks
                 }()
             }
         }
@@ -247,8 +251,8 @@ func (e *Env) process(wg *sync.WaitGroup, context context.Context,
 }
 
 func (e *Env) Run(processN int, tick time.Duration, deltas chan<- *Delta) {
-    exec := make(chan bool)
-    inflow := make(chan bool)
+    exec := make(chan int64)
+    inflow := make(chan int64)
     dts := make(chan *Delta, processN)
 
     context, stop := context.WithCancel(context.Background())
@@ -282,9 +286,11 @@ func (e *Env) Run(processN int, tick time.Duration, deltas chan<- *Delta) {
     ticker := time.NewTicker(tick)
     defer ticker.Stop()
 
+    var ticks int64 = 0
+
     inflowTick := e.GetConfig().InflowFrequency
     sendInflow := func () {
-        inflow <- true
+        inflow <- ticks
         inflowTick = e.GetConfig().InflowFrequency
     }
 
@@ -295,6 +301,7 @@ func (e *Env) Run(processN int, tick time.Duration, deltas chan<- *Delta) {
         case <-context.Done():
             return
         case <-ticker.C:
+            ticks++
             if e.initPop > 0 {
                 sendInflow()
                 e.initPop--
@@ -303,7 +310,7 @@ func (e *Env) Run(processN int, tick time.Duration, deltas chan<- *Delta) {
             if inflowTick == 0 {
                 sendInflow()
             }
-            exec <- true
+            exec <- ticks
         case dt := <-dts:
             e.applyDelta(dt)
             deltas <- dt

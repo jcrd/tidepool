@@ -5,6 +5,7 @@ import (
 )
 
 type Stats struct {
+    Ticks int64
     GeneExecN [gene.N]int
     ByName map[string]int64
 }
@@ -23,6 +24,9 @@ func (s *Stats) inc(name string, i int64) {
 }
 
 func (s *Stats) Add(a *Stats) {
+    if a.Ticks > s.Ticks {
+        s.Ticks = a.Ticks
+    }
     for i := range a.GeneExecN {
         s.GeneExecN[i] += a.GeneExecN[i]
     }

@@ -24,6 +24,7 @@
 
         ws.onmessage = function (ev) {
             var stats = JSON.parse(ev.data)
+            updateStat(tbl, "Ticks", stats.Ticks)
             updateStat(tbl, "GeneExecN", stats.GeneExecN)
             for (var n in stats.ByName) {
                 updateStat(tbl, n, stats.ByName[n])
