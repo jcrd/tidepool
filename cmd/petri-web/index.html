@@ -2,9 +2,10 @@
 <html>
 <script>
     function updateStats(stats) {
-        for (var s in stats) {
-            var v = document.getElementById(s)
-            v.innerHTML = stats[s]
+        document.getElementById("GeneExecN").innerHTML = stats.GeneExecN
+        for (var name in stats.ByName) {
+            var v = document.getElementById(name)
+            v.innerHTML = stats.ByName[name]
         }
     }
 
@@ -25,20 +26,20 @@
                 <td id="GeneExecN">0</td>
             </tr>
             <tr>
-                <td>CellKilled</td>
-                <td id="CellKilled">0</td>
+                <td>CellsKilled</td>
+                <td id="CellsKilled">0</td>
             </tr>
             <tr>
-                <td>CellShared</td>
-                <td id="CellShared">0</td>
+                <td>CellsShared</td>
+                <td id="CellsShared">0</td>
             </tr>
             <tr>
-                <td>ViableCellKilled</td>
-                <td id="ViableCellKilled">0</td>
+                <td>ViableCellsKilled</td>
+                <td id="ViableCellsKilled">0</td>
             </tr>
             <tr>
-                <td>ViableCellShared</td>
-                <td id="ViableCellShared">0</td>
+                <td>ViableCellsShared</td>
+                <td id="ViableCellsShared">0</td>
             </tr>
         </table>
     </div>

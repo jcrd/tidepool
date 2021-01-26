@@ -30,7 +30,7 @@ var (
         mutex: &sync.RWMutex{},
         channels: make(map[int]chan []byte),
     }
-    stats = &petri.Stats{}
+    stats = petri.NewStats()
 )
 
 func (c *Conn) addChannel(ch chan []byte) int {

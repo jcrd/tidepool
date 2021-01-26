@@ -6,18 +6,27 @@ import (
 
 type Stats struct {
     GeneExecN [gene.N]int
-    CellKilled int
-    CellShared int
-    ViableCellKilled int
-    ViableCellShared int
+    ByName map[string]int64
+}
+
+func NewStats() *Stats {
+    return &Stats{
+        ByName: make(map[string]int64),
+    }
+}
+
+func (s *Stats) inc(name string, i int64) {
+    if v, ok := s.ByName[name]; ok {
+        i = i + v
+    }
+    s.ByName[name] = i
 }
 
 func (s *Stats) Add(a *Stats) {
     for i := range a.GeneExecN {
         s.GeneExecN[i] += a.GeneExecN[i]
     }
-    s.CellKilled += a.CellKilled
-    s.CellShared += a.CellShared
-    s.ViableCellKilled += a.ViableCellKilled
-    s.ViableCellShared += a.ViableCellShared
+    for n, i := range a.ByName {
+        s.inc(n, i)
+    }
 }

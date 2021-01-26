@@ -8,7 +8,7 @@ type Delta struct {
 func newDelta() *Delta {
     return &Delta{
         Cells: make(map[int32]*Cell),
-        Stats: &Stats{},
+        Stats: NewStats(),
     }
 }
 
