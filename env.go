@@ -162,7 +162,7 @@ func (e *Env) getRandomCell(ctx *Context, state int) *Cell {
         }
     case CELL_ANY:
         for _, c := range e.cells {
-            fillBuf(c.Idx, false, &i)
+            fillBuf(c.Idx, true, &i)
         }
     }
 
