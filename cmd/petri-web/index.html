@@ -1,0 +1,46 @@
+<!doctype html>
+<html>
+<script>
+    function updateStats(stats) {
+        for (var s in stats) {
+            var v = document.getElementById(s)
+            v.innerHTML = stats[s]
+        }
+    }
+
+    window.onload = function () {
+        var ws = new WebSocket("{{.}}")
+
+        ws.onmessage = function (ev) {
+            var stats = JSON.parse(ev.data)
+            updateStats(stats)
+        }
+    }
+</script>
+<body>
+    <div>
+        <table id="stats">
+            <tr>
+                <td>GeneExecN</td>
+                <td id="GeneExecN">0</td>
+            </tr>
+            <tr>
+                <td>CellKilled</td>
+                <td id="CellKilled">0</td>
+            </tr>
+            <tr>
+                <td>CellShared</td>
+                <td id="CellShared">0</td>
+            </tr>
+            <tr>
+                <td>ViableCellKilled</td>
+                <td id="ViableCellKilled">0</td>
+            </tr>
+            <tr>
+                <td>ViableCellShared</td>
+                <td id="ViableCellShared">0</td>
+            </tr>
+        </table>
+    </div>
+</body>
+</html>
