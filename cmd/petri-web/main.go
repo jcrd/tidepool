@@ -31,6 +31,7 @@ var (
         channels: make(map[int]chan []byte),
     }
     stats = petri.NewStats()
+    request = make(chan chan []byte)
 )
 
 func (c *Conn) addChannel(ch chan []byte) int {
@@ -69,17 +70,11 @@ func wsHandle(w http.ResponseWriter, r *http.Request) {
     }
     defer c.Close()
 
-    json, err := json.Marshal(stats)
-    if err != nil {
-        log.Println(err)
-        return
-    }
-    c.WriteMessage(websocket.TextMessage, json)
-
     ch := make(chan []byte)
     id := conn.addChannel(ch)
 
     go func() {
+        request <- ch
         for json := range ch {
             c.WriteMessage(websocket.TextMessage, json)
         }
@@ -114,6 +109,13 @@ func main() {
                     return
                 }
                 stats.Add(dt.Stats)
+            case ch := <-request:
+                json, err := json.Marshal(stats)
+                if err != nil {
+                    log.Println(err)
+                    break
+                }
+                ch <- json
             case <-update:
                 json, err := json.Marshal(stats)
                 if err != nil {
