@@ -1,47 +1,39 @@
 <!doctype html>
 <html>
 <script>
-    function updateStats(stats) {
-        document.getElementById("GeneExecN").innerHTML = stats.GeneExecN
-        for (var name in stats.ByName) {
-            var v = document.getElementById(name)
-            v.innerHTML = stats.ByName[name]
+    function updateStat(tbl, n, v) {
+        var stat = document.getElementById(n)
+        if (stat) {
+            stat.innerHTML = v
+            return
         }
+
+        var row = tbl.insertRow()
+
+        row.insertCell().innerHTML = n
+
+        stat = row.insertCell()
+        stat.id = n
+        stat.innerHTML = v
     }
 
     window.onload = function () {
         var ws = new WebSocket("{{.}}")
 
+        var tbl = document.getElementById("stats")
+
         ws.onmessage = function (ev) {
             var stats = JSON.parse(ev.data)
-            updateStats(stats)
+            updateStat(tbl, "GeneExecN", stats.GeneExecN)
+            for (var n in stats.ByName) {
+                updateStat(tbl, n, stats.ByName[n])
+            }
         }
     }
 </script>
 <body>
     <div>
-        <table id="stats">
-            <tr>
-                <td>GeneExecN</td>
-                <td id="GeneExecN">0</td>
-            </tr>
-            <tr>
-                <td>CellsKilled</td>
-                <td id="CellsKilled">0</td>
-            </tr>
-            <tr>
-                <td>CellsShared</td>
-                <td id="CellsShared">0</td>
-            </tr>
-            <tr>
-                <td>ViableCellsKilled</td>
-                <td id="ViableCellsKilled">0</td>
-            </tr>
-            <tr>
-                <td>ViableCellsShared</td>
-                <td id="ViableCellsShared">0</td>
-            </tr>
-        </table>
+        <table id="stats"></table>
     </div>
 </body>
 </html>
