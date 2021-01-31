@@ -1,5 +1,10 @@
 <!doctype html>
 <html>
+<body>
+    <div>
+        <table id="stats"></table>
+    </div>
+</body>
 <script>
     function updateStat(tbl, n, v) {
         var stat = document.getElementById(n)
@@ -17,24 +22,17 @@
         stat.innerHTML = v
     }
 
-    window.onload = function () {
-        var ws = new WebSocket("{{.}}")
+    var ws = new WebSocket("{{.}}")
 
-        var tbl = document.getElementById("stats")
+    var tbl = document.getElementById("stats")
 
-        ws.onmessage = function (ev) {
-            var stats = JSON.parse(ev.data)
-            updateStat(tbl, "Ticks", stats.Ticks)
-            updateStat(tbl, "GeneExecN", stats.GeneExecN)
-            for (var n in stats.ByName) {
-                updateStat(tbl, n, stats.ByName[n])
-            }
+    ws.onmessage = function (ev) {
+        var stats = JSON.parse(ev.data)
+        updateStat(tbl, "Ticks", stats.Ticks)
+        updateStat(tbl, "GeneExecN", stats.GeneExecN)
+        for (var n in stats.ByName) {
+            updateStat(tbl, n, stats.ByName[n])
         }
     }
 </script>
-<body>
-    <div>
-        <table id="stats"></table>
-    </div>
-</body>
 </html>
