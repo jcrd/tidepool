@@ -262,6 +262,16 @@ func (e *Env) process(wg *sync.WaitGroup, context context.Context,
     }
 }
 
+func (e *Env) GetCells() CellMap {
+    cm := NewCellMap()
+    e.mutex.RLock()
+    defer e.mutex.RUnlock()
+    for _, c := range e.cells {
+        cm[c.Idx] = c.clone()
+    }
+    return cm
+}
+
 func (e *Env) Run(processN int, tick time.Duration, deltas chan<- *Delta) {
     exec := make(chan int64)
     inflow := make(chan int64)
