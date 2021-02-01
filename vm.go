@@ -247,6 +247,9 @@ func (vm *VM) exec(c *Cell) *Delta {
 
     if c.Energy == 0 {
         dt.Stats.inc("NaturalDeaths", 1)
+        if c.Generation >= env.GetConfig().ViableCellGeneration {
+            dt.Stats.inc("ViableCellNaturalDeaths", 1)
+        }
     }
 
     return dt
