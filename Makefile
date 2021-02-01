@@ -13,7 +13,8 @@ $(BUILDDIR)/petri-web: cmd/petri-web/main.go $(SRC)
 	go build -o $@ $<
 
 run-petri-web: $(BUILDDIR)/petri-web
-	$(BUILDDIR)/petri-web -index cmd/petri-web/index.html
+	$(BUILDDIR)/petri-web -index cmd/petri-web/index.html \
+		-width 64 -height 64
 
 clean:
 	rm -fr $(BUILDDIR)
