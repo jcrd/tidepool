@@ -6,11 +6,10 @@ import (
     "encoding/json"
     "fmt"
     "os"
+    "os/signal"
 
     "petri"
     "petri/cmd"
-
-    "github.com/eiannone/keyboard"
 )
 
 func printDelta(dt *petri.Delta) {
@@ -25,26 +24,13 @@ func printDelta(dt *petri.Delta) {
 func main() {
     env, dts := cmd.ParseAndRun()
 
-    keyEvents, err := keyboard.GetKeys(1)
-    if err != nil {
-        fmt.Fprintln(os.Stderr, "keyboard: failed to initialize")
-        os.Exit(1)
-    }
-    defer keyboard.Close()
+    sig := make(chan os.Signal, 1)
+    signal.Notify(sig, os.Interrupt)
 
     for {
         select {
-        case ev := <-keyEvents:
-            if ev.Err != nil {
-                fmt.Fprintf(os.Stderr, "keyboard: %s\n", ev.Err)
-                break
-            }
-            switch ev.Key {
-            case keyboard.KeyEsc:
-                fallthrough
-            case keyboard.KeyCtrlC:
-                env.Stop()
-            }
+        case <-sig:
+            env.Stop()
         case dt, ok := <-dts:
             if !ok {
                 return
