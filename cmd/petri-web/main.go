@@ -23,6 +23,12 @@ type Conn struct {
     nextID int
 }
 
+type EnvJSON struct {
+    Width int32
+    Height int32
+    ViableCellGeneration int64
+}
+
 var (
     indexTemp *template.Template
     upgrader = websocket.Upgrader{}
@@ -30,7 +36,10 @@ var (
         mutex: &sync.RWMutex{},
         channels: make(map[int]chan []byte),
     }
+
+    env *petri.Env
     stats = petri.NewStats()
+    cells = petri.NewCellMap()
     request = make(chan int)
 )
 
@@ -59,7 +68,7 @@ func (c *Conn) Close() {
 }
 
 func indexHandle(w http.ResponseWriter, r *http.Request) {
-    indexTemp.Execute(w, "ws://" + r.Host + "/ws")
+    indexTemp.Execute(w, r.Host)
 }
 
 func wsHandle(w http.ResponseWriter, r *http.Request) {
@@ -85,18 +94,31 @@ func wsHandle(w http.ResponseWriter, r *http.Request) {
     }
 }
 
+func envHandle(w http.ResponseWriter, r *http.Request) {
+    config := env.GetConfig()
+    j := EnvJSON{
+        Width: env.Width,
+        Height: env.Height,
+        ViableCellGeneration: config.ViableCellGeneration,
+    }
+    json.NewEncoder(w).Encode(j)
+}
+
 func main() {
     u := flag.Duration("update", time.Second, "Stats update frequency")
     a := flag.String("addr", ":3000", "http service address")
     index := flag.String("index", "index.html", "Path to html index file")
 
-    env, dts := cmd.ParseAndRun()
+    var dts <-chan *petri.Delta
+
+    env, dts = cmd.ParseAndRun()
     defer env.Stop()
 
     indexTemp = template.Must(template.ParseFiles(*index))
 
     http.HandleFunc("/", indexHandle)
     http.HandleFunc("/ws", wsHandle)
+    http.HandleFunc("/env", envHandle)
 
     update := time.Tick(*u)
 
@@ -108,9 +130,14 @@ func main() {
                 if !ok {
                     return
                 }
+                cells.Add(dt.Cells)
                 stats.Add(dt.Stats)
             case id := <-request:
-                json, err := json.Marshal(stats)
+                dt := &petri.Delta{
+                    Cells: env.GetCells(),
+                    Stats: stats,
+                }
+                json, err := json.Marshal(dt)
                 if err != nil {
                     log.Println(err)
                     break
@@ -121,10 +148,17 @@ func main() {
                 }
                 conn.mutex.RUnlock()
             case <-update:
-                json, err := json.Marshal(stats)
+                dt := &petri.Delta{
+                    Cells: cells,
+                    Stats: stats,
+                }
+                json, err := json.Marshal(dt)
                 if err != nil {
                     log.Println(err)
                     break
+                }
+                for i := range cells {
+                    delete(cells, i)
                 }
                 conn.mutex.RLock()
                 for _, ch := range conn.channels {

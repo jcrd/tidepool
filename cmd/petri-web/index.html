@@ -1,11 +1,14 @@
 <!doctype html>
 <html>
 <body>
+    <div id="canvas-container"></div>
     <div>
         <table id="stats"></table>
     </div>
 </body>
 <script>
+    const url = "{{.}}"
+
     function updateStat(tbl, n, v) {
         var stat = document.getElementById(n)
         if (stat) {
@@ -22,17 +25,68 @@
         stat.innerHTML = v
     }
 
-    var ws = new WebSocket("{{.}}")
+    function rgbFromCell(env, cell) {
+        if (cell.Energy == 0 || cell.Generation < env.ViableCellGeneration) {
+            return {r: 0, g: 0, b: 0}
+        }
 
-    var tbl = document.getElementById("stats")
+        var str = cell.Genome
+        var hash = 0
+        for (var i = 0; i < str.length; i++) {
+            hash = str.charCodeAt(i) + ((hash << 5) - hash)
+        }
 
-    ws.onmessage = function (ev) {
-        var stats = JSON.parse(ev.data)
-        updateStat(tbl, "Ticks", stats.Ticks)
-        updateStat(tbl, "GeneExecN", stats.GeneExecN)
-        for (var n in stats.ByName) {
-            updateStat(tbl, n, stats.ByName[n])
+        return {
+            r: (hash & 0xff0000) >> 16,
+            g: (hash & 0x00ff00) >> 8,
+            b: (hash & 0x0000ff),
         }
     }
+
+    function drawCell(ctx, env, cell) {
+        var img = ctx.createImageData(1, 1)
+        var {r, g, b} = rgbFromCell(env, cell)
+
+        img.data[0] = r
+        img.data[1] = g
+        img.data[2] = b
+        img.data[3] = 255
+
+        ctx.putImageData(img, cell.X, cell.Y)
+    }
+
+    async function init(ws) {
+        var resp = await fetch("http://" + url + "/env")
+        var env = await resp.json()
+
+        var canvas = document.createElement("canvas")
+        canvas.id = "viewport"
+        canvas.width = env.Width
+        canvas.height = env.Height
+
+        var ctx = canvas.getContext("2d")
+        var tbl = document.getElementById("stats")
+
+        document.getElementById("canvas-container").appendChild(canvas)
+
+        ws.onmessage = function (ev) {
+            var dt = JSON.parse(ev.data)
+            var stats = dt.Stats
+
+            updateStat(tbl, "Ticks", stats.Ticks)
+            updateStat(tbl, "GeneExecN", stats.GeneExecN)
+            for (var n in stats.ByName) {
+                updateStat(tbl, n, stats.ByName[n])
+            }
+
+            for (var idx in dt.Cells) {
+                drawCell(ctx, env, dt.Cells[idx])
+            }
+        }
+    }
+
+    var ws = new WebSocket("ws://" + url + "/ws")
+
+    init(ws)
 </script>
 </html>
