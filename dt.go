@@ -1,13 +1,13 @@
 package petri
 
 type Delta struct {
-    Cells map[int32]*Cell
+    Cells CellMap
     Stats *Stats
 }
 
 func newDelta() *Delta {
     return &Delta{
-        Cells: make(map[int32]*Cell),
+        Cells: make(CellMap),
         Stats: NewStats(),
     }
 }
