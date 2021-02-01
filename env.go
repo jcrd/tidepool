@@ -40,16 +40,16 @@ type Config struct {
 }
 
 const (
-    DIR_LEFT int = iota
-    DIR_RIGHT
-    DIR_UP
-    DIR_DOWN
+    dirLeft int = iota
+    dirRight
+    dirUp
+    dirDown
 )
 
 const (
-    CELL_DEAD int = iota
-    CELL_LIVE
-    CELL_ANY
+    cellDead int = iota
+    cellLive
+    cellAny
 )
 
 var defaultConfig = Config{
@@ -164,15 +164,15 @@ func (e *Env) getRandomCell(ctx *Context, state int) *Cell {
     e.mutex.RLock()
 
     switch state {
-    case CELL_DEAD:
+    case cellDead:
         for _, c := range e.cells {
             fillBuf(c.Idx, false, &i)
         }
-    case CELL_LIVE:
+    case cellLive:
         for idx := range e.liveCells {
             fillBuf(idx, true, &i)
         }
-    case CELL_ANY:
+    case cellAny:
         for _, c := range e.cells {
             fillBuf(c.Idx, true, &i)
         }
@@ -197,25 +197,25 @@ func (e *Env) getNeighborIdx(c *Cell, dir int) int32 {
     x, y := c.X, c.Y
 
     switch dir {
-    case DIR_LEFT:
+    case dirLeft:
         if x == 0 {
             x = e.Width - 1
         } else {
             x--
         }
-    case DIR_RIGHT:
+    case dirRight:
         if x == e.Width - 1 {
             x = 0
         } else {
             x++
         }
-    case DIR_UP:
+    case dirUp:
         if y == 0 {
             y = e.Height - 1
         } else {
             y--
         }
-    case DIR_DOWN:
+    case dirDown:
         if y == e.Height - 1 {
             y = 0
         } else {
@@ -239,17 +239,17 @@ func (e *Env) process(wg *sync.WaitGroup, context context.Context,
         case ticks := <-inflow:
             var c *Cell
             if !e.GetConfig().SeedLiveCells {
-                if c = e.getRandomCell(ctx, CELL_DEAD); c == nil {
+                if c = e.getRandomCell(ctx, cellDead); c == nil {
                     break
                 }
             } else {
-                c = e.getRandomCell(ctx, CELL_ANY)
+                c = e.getRandomCell(ctx, cellAny)
             }
             dt := c.seed(ctx)
             dt.Stats.Ticks = ticks
             dts <- dt
         case ticks := <-exec:
-            if c := e.getRandomCell(ctx, CELL_LIVE); c != nil {
+            if c := e.getRandomCell(ctx, cellLive); c != nil {
                 dt := c.exec(ctx)
                 dt.Stats.Ticks = ticks
                 dts <- dt
