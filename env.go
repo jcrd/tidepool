@@ -54,7 +54,7 @@ const (
 
 var defaultConfig = Config{
     InflowFrequency: 10,
-    ViableCellGeneration: 3,
+    ViableCellGeneration: 2,
     FailedKillPenalty: 3,
     SeedLiveCells: true,
 }
