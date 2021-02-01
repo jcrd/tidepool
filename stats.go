@@ -29,6 +29,10 @@ func (s *Stats) update(name string, i int64) {
     }
 }
 
+func (s *Stats) set(name string, i int64) {
+    s.ByName[name] = i
+}
+
 func (s *Stats) Add(a *Stats) {
     if a.Ticks > s.Ticks {
         s.Ticks = a.Ticks
@@ -38,6 +42,10 @@ func (s *Stats) Add(a *Stats) {
     }
     for n, i := range a.ByName {
         switch n {
+        case "ViableLiveCells":
+            fallthrough
+        case "LiveCells":
+            s.set(n, i)
         case "MaxGeneration":
             s.update(n, i)
         default:

@@ -122,6 +122,7 @@ func (e *Env) getNextCellID() int64 {
 
 func (e *Env) applyDelta(dt *Delta) {
     e.mutex.Lock()
+
     for _, c := range dt.Cells {
         if c.live() {
             e.liveCells[c.Idx] = true
@@ -131,6 +132,20 @@ func (e *Env) applyDelta(dt *Delta) {
         e.cells[c.Idx] = c.clone()
         delete(e.execCells, c.Idx)
     }
+
+    var i int64
+    config := e.GetConfig()
+    for idx := range e.liveCells {
+        c := e.cells[idx]
+        if c.Generation >= config.ViableCellGeneration {
+            i++
+        }
+    }
+    if i > 0 {
+        dt.Stats.ByName["ViableLiveCells"] = i
+    }
+    dt.Stats.ByName["LiveCells"] = int64(len(e.liveCells))
+
     e.mutex.Unlock()
 }
 
