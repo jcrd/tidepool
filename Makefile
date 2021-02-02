@@ -16,7 +16,10 @@ run-petri-web: $(BUILDDIR)/petri-web
 	$(BUILDDIR)/petri-web -index cmd/petri-web/index.html \
 		-width 64 -height 64
 
+benchmark: env_test.go $(SRC)
+	go test -bench=.
+
 clean:
 	rm -fr $(BUILDDIR)
 
-.PHONY: all run-petri-web clean
+.PHONY: all run-petri-web benchmark clean
