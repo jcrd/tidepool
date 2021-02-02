@@ -277,14 +277,14 @@ func (e *Env) process(wg *sync.WaitGroup, context context.Context,
     }
 }
 
-func (e *Env) GetCells() CellMap {
+func (e *Env) WithCells(f func(CellMap)) {
     cm := NewCellMap()
     e.mutex.RLock()
     defer e.mutex.RUnlock()
-    for _, c := range e.cells {
-        cm[c.Idx] = c.clone()
+    for i, c := range e.cells {
+        cm[int32(i)] = c
     }
-    return cm
+    f(cm)
 }
 
 func (e *Env) Run(processN int, tick time.Duration, deltas chan<- *Delta) {

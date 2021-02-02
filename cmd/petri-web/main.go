@@ -133,18 +133,22 @@ func main() {
                 cells.Add(dt.Cells)
                 stats.Add(dt.Stats)
             case id := <-request:
-                dt := &petri.Delta{
-                    Cells: env.GetCells(),
-                    Stats: stats,
-                }
-                json, err := json.Marshal(dt)
+                var js []byte
+                var err error
+                env.WithCells(func(cm petri.CellMap) {
+                    dt := &petri.Delta{
+                        Cells: cm,
+                        Stats: stats,
+                    }
+                    js, err = json.Marshal(dt)
+                })
                 if err != nil {
                     log.Println(err)
                     break
                 }
                 conn.mutex.RLock()
                 if ch, ok := conn.channels[id]; ok {
-                    ch <- json
+                    ch <- js
                 }
                 conn.mutex.RUnlock()
             case <-update:
@@ -152,7 +156,7 @@ func main() {
                     Cells: cells,
                     Stats: stats,
                 }
-                json, err := json.Marshal(dt)
+                js, err := json.Marshal(dt)
                 if err != nil {
                     log.Println(err)
                     break
@@ -162,7 +166,7 @@ func main() {
                 }
                 conn.mutex.RLock()
                 for _, ch := range conn.channels {
-                    ch <- json
+                    ch <- js
                 }
                 conn.mutex.RUnlock()
             }
