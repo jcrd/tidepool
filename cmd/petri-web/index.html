@@ -7,7 +7,8 @@
     </div>
 </body>
 <script>
-    const url = "{{.}}"
+    const url = "{{.Host}}"
+    const scale = "{{.Scale}}"
 
     function updateStat(tbl, n, v) {
         var stat = document.getElementById(n)
@@ -44,15 +45,20 @@
     }
 
     function drawCell(ctx, env, cell) {
-        var img = ctx.createImageData(1, 1)
+        var img = ctx.createImageData(scale, scale)
         var {r, g, b} = rgbFromCell(env, cell)
 
-        img.data[0] = r
-        img.data[1] = g
-        img.data[2] = b
-        img.data[3] = 255
+        for (var x = 0; x < scale; x++) {
+            for (var y = 0; y < scale; y++) {
+                var i = (y * scale + x) * 4
+                img.data[i] = r
+                img.data[i + 1] = g
+                img.data[i + 2] = b
+                img.data[i + 3] = 255
+            }
+        }
 
-        ctx.putImageData(img, cell.X, cell.Y)
+        ctx.putImageData(img, cell.X * scale, cell.Y * scale)
     }
 
     async function init(ws) {
@@ -61,8 +67,8 @@
 
         var canvas = document.createElement("canvas")
         canvas.id = "viewport"
-        canvas.width = env.Width
-        canvas.height = env.Height
+        canvas.width = env.Width * scale
+        canvas.height = env.Height * scale
 
         var ctx = canvas.getContext("2d")
         var tbl = document.getElementById("stats")

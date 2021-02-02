@@ -29,6 +29,11 @@ type EnvJSON struct {
     ViableCellGeneration int64
 }
 
+type Index struct {
+    Host string
+    Scale int
+}
+
 var (
     indexTemp *template.Template
     upgrader = websocket.Upgrader{}
@@ -38,6 +43,7 @@ var (
     }
 
     env *petri.Env
+    scale int
     stats = petri.NewStats()
     cellMap = make(petri.CellMap)
     request = make(chan int)
@@ -68,7 +74,10 @@ func (c *Conn) Close() {
 }
 
 func indexHandle(w http.ResponseWriter, r *http.Request) {
-    indexTemp.Execute(w, r.Host)
+    indexTemp.Execute(w, Index{
+        Host: r.Host,
+        Scale: scale,
+    })
 }
 
 func wsHandle(w http.ResponseWriter, r *http.Request) {
@@ -108,6 +117,7 @@ func main() {
     u := flag.Duration("update", time.Second, "Stats update frequency")
     a := flag.String("addr", ":3000", "http service address")
     index := flag.String("index", "index.html", "Path to html index file")
+    flag.IntVar(&scale, "scale", 1, "Scale of cell visualization")
 
     var dts <-chan *petri.Delta
 
