@@ -9,7 +9,7 @@ import (
 const genomeStartIdx = 1
 
 type Cell struct {
-    Idx int32 `json:"-"`
+    Idx int32
     ID int64
     Origin int64
     Parent int64
@@ -18,6 +18,11 @@ type Cell struct {
     X int32
     Y int32
     Genome gene.Genome
+}
+
+type Delta struct {
+    Cells []*Cell
+    Stats *Stats
 }
 
 func newCell(idx, x, y, g int32) *Cell {
@@ -92,8 +97,11 @@ func (c *Cell) seed(ctx *Context) *Delta {
     c.resetMetadata(ctx)
     c.randomizeGenome(ctx)
 
-    dt := newDelta()
-    dt.addCell(c)
+    dt := &Delta{
+        Cells: make([]*Cell, 1),
+        Stats: NewStats(),
+    }
+    dt.Cells[0] = c
 
     return dt
 }

@@ -9,8 +9,6 @@ import (
     "time"
 )
 
-type CellMap map[int32]*Cell
-
 type Env struct {
     Width int32
     Height int32
@@ -57,16 +55,6 @@ var defaultConfig = Config{
     ViableCellGeneration: 2,
     FailedKillPenalty: 3,
     SeedLiveCells: true,
-}
-
-func NewCellMap() CellMap {
-    return make(CellMap)
-}
-
-func (cm CellMap) Add(cs CellMap) {
-    for _, c := range cs {
-        cm[c.Idx] = c
-    }
 }
 
 func NewEnv(width, height, genomeSize, pop int32, seed int64) *Env {
@@ -277,14 +265,10 @@ func (e *Env) process(wg *sync.WaitGroup, context context.Context,
     }
 }
 
-func (e *Env) WithCells(f func(CellMap)) {
-    cm := NewCellMap()
+func (e *Env) WithCells(f func([]*Cell)) {
     e.mutex.RLock()
     defer e.mutex.RUnlock()
-    for i, c := range e.cells {
-        cm[int32(i)] = c
-    }
-    f(cm)
+    f(e.cells)
 }
 
 func (e *Env) Run(processN int, tick time.Duration, deltas chan<- *Delta) {

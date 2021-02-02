@@ -39,7 +39,7 @@ var (
 
     env *petri.Env
     stats = petri.NewStats()
-    cells = petri.NewCellMap()
+    cellMap = make(petri.CellMap)
     request = make(chan int)
 )
 
@@ -130,14 +130,16 @@ func main() {
                 if !ok {
                     return
                 }
-                cells.Add(dt.Cells)
+                for _, c := range dt.Cells {
+                    cellMap.AddCell(c)
+                }
                 stats.Add(dt.Stats)
             case id := <-request:
                 var js []byte
                 var err error
-                env.WithCells(func(cm petri.CellMap) {
+                env.WithCells(func(cs []*petri.Cell) {
                     dt := &petri.Delta{
-                        Cells: cm,
+                        Cells: cs,
                         Stats: stats,
                     }
                     js, err = json.Marshal(dt)
@@ -153,7 +155,7 @@ func main() {
                 conn.mutex.RUnlock()
             case <-update:
                 dt := &petri.Delta{
-                    Cells: cells,
+                    Cells: cellMap.Cells(),
                     Stats: stats,
                 }
                 js, err := json.Marshal(dt)
@@ -161,9 +163,7 @@ func main() {
                     log.Println(err)
                     break
                 }
-                for i := range cells {
-                    delete(cells, i)
-                }
+                cellMap.Reset()
                 conn.mutex.RLock()
                 for _, ch := range conn.channels {
                     ch <- js

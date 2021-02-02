@@ -79,8 +79,8 @@
                 updateStat(tbl, n, stats.ByName[n])
             }
 
-            for (var idx in dt.Cells) {
-                drawCell(ctx, env, dt.Cells[idx])
+            for (var i = 0; i < dt.Cells.length; i++) {
+                drawCell(ctx, env, dt.Cells[i])
             }
         }
     }
