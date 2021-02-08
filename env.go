@@ -33,7 +33,7 @@ type Env struct {
 type Config struct {
     InflowFrequency int64
     ViableCellGeneration int64
-    FailedKillPenalty int
+    FailedKillPenalty int64
     SeedLiveCells bool
 }
 

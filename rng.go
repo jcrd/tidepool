@@ -8,14 +8,14 @@ import (
 
 type RNG interface {
     Mutate(*Context) bool
-    Energy(*Context) int
+    Energy(*Context) int64
     CellAccessible(*Context, *Cell, gene.Gene, gene.Gene) bool
 }
 
 type DefaultRNG struct {
     MutationRate float64
-    InflowRateBase int
-    InflowRateModifier int
+    InflowRateBase int64
+    InflowRateModifier int64
     bitsPerGene [gene.N]int
 }
 
@@ -30,8 +30,8 @@ func (r DefaultRNG) Mutate(ctx *Context) bool {
     return ctx.rand.Float64() < r.MutationRate
 }
 
-func (r DefaultRNG) Energy(ctx *Context) int {
-    return r.InflowRateBase + (ctx.rand.Int() % r.InflowRateModifier)
+func (r DefaultRNG) Energy(ctx *Context) int64 {
+    return r.InflowRateBase + (ctx.rand.Int63() % r.InflowRateModifier)
 }
 
 func (r DefaultRNG) CellAccessible(ctx *Context, c *Cell,

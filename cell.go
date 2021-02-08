@@ -14,7 +14,7 @@ type Cell struct {
     Origin int64
     Parent int64
     Generation int64
-    Energy int
+    Energy int64
     X int32
     Y int32
     Genome gene.Genome
