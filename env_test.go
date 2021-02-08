@@ -5,11 +5,11 @@ package petri
 import (
     "encoding/json"
     "testing"
+
+    "google.golang.org/protobuf/proto"
 )
 
-func BenchmarkJSONMarshalCells(b *testing.B) {
-    b.ReportAllocs()
-
+func BenchmarkMarshalDelta(b *testing.B) {
     var (
         w int32 = 64
         h int32 = 64
@@ -38,7 +38,17 @@ func BenchmarkJSONMarshalCells(b *testing.B) {
 
     b.ResetTimer()
 
-    for i := 0; i < b.N; i++ {
-        json.Marshal(dt)
-    }
+    b.Run("json", func(b *testing.B) {
+        b.ReportAllocs()
+        for i := 0; i < b.N; i++ {
+            json.Marshal(dt)
+        }
+    })
+
+    b.Run("protobuf", func(b *testing.B) {
+        b.ReportAllocs()
+        for i := 0; i < b.N; i++ {
+            proto.Marshal(dt.ProtobufMessage())
+        }
+    })
 }

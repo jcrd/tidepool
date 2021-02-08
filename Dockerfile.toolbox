@@ -1,1 +1,5 @@
 FROM supplantr/golang-toolbox
+
+RUN dnf install -y protobuf-compiler
+
+RUN go get google.golang.org/protobuf/cmd/protoc-gen-go
