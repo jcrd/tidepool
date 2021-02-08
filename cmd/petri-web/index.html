@@ -77,12 +77,10 @@
 
         ws.onmessage = function (ev) {
             var dt = JSON.parse(ev.data)
-            var stats = dt.Stats
 
-            updateStat(tbl, "Ticks", stats.Ticks)
-            updateStat(tbl, "GeneExecN", stats.GeneExecN)
-            for (var n in stats.ByName) {
-                updateStat(tbl, n, stats.ByName[n])
+            updateStat(tbl, "Ticks", dt.Stats["Ticks"])
+            for (var n in dt.Stats) {
+                updateStat(tbl, n, dt.Stats[n])
             }
 
             for (var i = 0; i < dt.Cells.length; i++) {

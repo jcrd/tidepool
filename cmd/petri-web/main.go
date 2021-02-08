@@ -44,7 +44,7 @@ var (
 
     env *petri.Env
     scale int
-    stats = petri.NewStats()
+    stats = make(petri.Stats)
     cellMap = make(petri.CellMap)
     request = make(chan int)
 )

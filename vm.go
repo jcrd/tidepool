@@ -99,11 +99,9 @@ func (vm *VM) incGenomeIdx() {
     }
 }
 
-func (vm *VM) execGene(c *Cell, g gene.Gene, stats *Stats) int {
+func (vm *VM) execGene(c *Cell, g gene.Gene, stats Stats) int {
     ctx := vm.ctx
     env := ctx.env
-
-    stats.GeneExecN[g]++
 
     switch g {
     case gene.ZERO:
@@ -220,7 +218,7 @@ func (vm *VM) exec(c *Cell) *Delta {
     defer vm.reset()
     vm.cellMap.AddCell(c)
 
-    stats := NewStats()
+    stats := make(Stats)
 
     for c.Energy > 0 {
         g := c.Genome[vm.genomeIdx]

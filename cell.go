@@ -22,7 +22,7 @@ type Cell struct {
 
 type Delta struct {
     Cells []*Cell
-    Stats *Stats
+    Stats Stats
 }
 
 func newCell(idx, x, y, g int32) *Cell {
@@ -99,7 +99,7 @@ func (c *Cell) seed(ctx *Context) *Delta {
 
     dt := &Delta{
         Cells: make([]*Cell, 1),
-        Stats: NewStats(),
+        Stats: make(Stats),
     }
     dt.Cells[0] = c
 

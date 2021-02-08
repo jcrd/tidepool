@@ -130,9 +130,9 @@ func (e *Env) applyDelta(dt *Delta) {
         }
     }
     if i > 0 {
-        dt.Stats.ByName["ViableLiveCells"] = i
+        dt.Stats["ViableLiveCells"] = i
     }
-    dt.Stats.ByName["LiveCells"] = int64(len(e.liveCells))
+    dt.Stats["LiveCells"] = int64(len(e.liveCells))
 
     e.mutex.Unlock()
 }
@@ -249,12 +249,12 @@ func (e *Env) process(wg *sync.WaitGroup, context context.Context,
                 c = e.getRandomCell(ctx, cellAny)
             }
             dt := c.seed(ctx)
-            dt.Stats.Ticks = ticks
+            dt.Stats["Ticks"] = ticks
             dts <- dt
         case ticks := <-exec:
             if c := e.getRandomCell(ctx, cellLive); c != nil {
                 dt := c.exec(ctx)
-                dt.Stats.Ticks = ticks
+                dt.Stats["Ticks"] = ticks
                 dts <- dt
             } else {
                 go func() {

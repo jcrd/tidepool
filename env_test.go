@@ -15,16 +15,14 @@ func BenchmarkJSONMarshalCells(b *testing.B) {
         h int32 = 64
         gs int32 = 1024
 
-        stats = &Stats{
-            ByName: map[string]int64{
-                "LiveCellsKilled": 10000,
-                "LiveCellsShared": 10000,
-                "CellsKilled": 10000,
-                "CellsShared": 10000,
-                "ReproductionAttempts": 10000,
-                "Reproductions": 1000,
-                "Mutations": 10,
-            },
+        stats = Stats{
+            "LiveCellsKilled": 10000,
+            "LiveCellsShared": 10000,
+            "CellsKilled": 10000,
+            "CellsShared": 10000,
+            "ReproductionAttempts": 10000,
+            "Reproductions": 1000,
+            "Mutations": 10,
         }
     )
 
