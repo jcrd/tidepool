@@ -177,7 +177,7 @@ func (vm *VM) execGene(c *Cell, g gene.Gene, stats Stats) int {
             if n.Energy > 0 {
                 stats.inc("LiveCellsKilled", 1)
             }
-            if n.Generation >= config.ViableCellGeneration {
+            if n.viable(config) {
                 stats.inc("ViableCellsKilled", 1)
             }
             stats.inc("CellsKilled", 1)
@@ -199,7 +199,7 @@ func (vm *VM) execGene(c *Cell, g gene.Gene, stats Stats) int {
 
             vm.cellMap.AddCell(n)
 
-            if n.Generation >= config.ViableCellGeneration {
+            if n.viable(config) {
                 stats.inc("ViableCellsShared", 1)
             }
             stats.inc("CellsShared", 1)
@@ -280,7 +280,7 @@ func (vm *VM) exec(c *Cell) *Delta {
 
     if c.Energy == 0 {
         stats.inc("NaturalDeaths", 1)
-        if c.Generation >= env.GetConfig().ViableCellGeneration {
+        if c.viable(env.GetConfig()) {
             stats.inc("ViableCellNaturalDeaths", 1)
         }
     }

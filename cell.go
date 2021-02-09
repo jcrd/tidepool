@@ -73,6 +73,10 @@ func (c *Cell) live() bool {
     return c.Energy > 0
 }
 
+func (c *Cell) viable(config Config) bool {
+    return c.Generation >= config.ViableCellGeneration
+}
+
 func (c *Cell) exec(ctx *Context) *Delta {
     return ctx.vm.exec(c)
 }

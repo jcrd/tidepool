@@ -125,7 +125,7 @@ func (e *Env) applyDelta(dt *Delta) {
     config := e.GetConfig()
     for idx := range e.liveCells {
         c := e.cells[idx]
-        if c.Generation >= config.ViableCellGeneration {
+        if c.viable(config) {
             i++
         }
     }
