@@ -129,9 +129,7 @@ func (e *Env) applyDelta(dt *Delta) {
             i++
         }
     }
-    if i > 0 {
-        dt.Stats["ViableLiveCells"] = i
-    }
+    dt.Stats["ViableLiveCells"] = i
     dt.Stats["LiveCells"] = int64(len(e.liveCells))
 
     e.mutex.Unlock()
