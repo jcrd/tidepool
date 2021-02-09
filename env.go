@@ -34,7 +34,7 @@ type Config struct {
     InflowFrequency int64
     ViableCellGeneration int64
     FailedKillPenalty int64
-    SeedLiveCells bool
+    SeedViableCells bool
 }
 
 const (
@@ -45,16 +45,17 @@ const (
 )
 
 const (
-    cellDead int = iota
-    cellLive
-    cellAny
+    cellDead = (1 << 0)
+    cellLive = (1 << 1)
+    cellNonviable = (1 << 2)
+    cellAny = cellDead | cellLive
 )
 
 var defaultConfig = Config{
     InflowFrequency: 10,
     ViableCellGeneration: 2,
     FailedKillPenalty: 3,
-    SeedLiveCells: true,
+    SeedViableCells: false,
 }
 
 func NewEnv(width, height, genomeSize, pop int32, seed int64) *Env {
@@ -148,14 +149,19 @@ func (e *Env) GetCellByIdx(idx int32) *Cell {
 }
 
 func (e *Env) getRandomCell(ctx *Context, state int) *Cell {
-    fillBuf := func(idx int32, live bool, i *int) {
+    config := e.GetConfig()
+
+    fillBuf := func(idx int32, s int, i *int) {
         if _, exec := e.execCells[idx]; exec {
             return
         }
-        if !live {
-            if _, live = e.liveCells[idx]; live {
+        if s & cellLive == 0 {
+            if _, live := e.liveCells[idx]; live {
                 return
             }
+        }
+        if s & cellNonviable == 1 && e.cells[idx].viable(config) {
+            return
         }
         ctx.cellsBuf[*i] = idx
         *i++
@@ -164,18 +170,13 @@ func (e *Env) getRandomCell(ctx *Context, state int) *Cell {
     i := 0
     e.mutex.RLock()
 
-    switch state {
-    case cellDead:
-        for _, c := range e.cells {
-            fillBuf(c.Idx, false, &i)
-        }
-    case cellLive:
+    if state & cellLive == state {
         for idx := range e.liveCells {
-            fillBuf(idx, true, &i)
+            fillBuf(idx, cellLive, &i)
         }
-    case cellAny:
+    } else {
         for _, c := range e.cells {
-            fillBuf(c.Idx, true, &i)
+            fillBuf(c.Idx, state, &i)
         }
     }
 
@@ -239,8 +240,8 @@ func (e *Env) process(wg *sync.WaitGroup, context context.Context,
             return
         case ticks := <-inflow:
             var c *Cell
-            if !e.GetConfig().SeedLiveCells {
-                if c = e.getRandomCell(ctx, cellDead); c == nil {
+            if !e.GetConfig().SeedViableCells {
+                if c = e.getRandomCell(ctx, cellAny | cellNonviable); c == nil {
                     break
                 }
             } else {
