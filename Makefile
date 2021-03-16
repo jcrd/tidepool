@@ -14,7 +14,7 @@ $(BUILDDIR)/web: cmd/web/main.go $(SRC)
 
 run-web: $(BUILDDIR)/web
 	$(BUILDDIR)/web -index cmd/web/index.html \
-		-width 64 -height 64
+		-width 32 -height 32 -scale 10
 
 benchmark: env_test.go $(SRC)
 	go test -bench=.
