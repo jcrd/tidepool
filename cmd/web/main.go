@@ -6,6 +6,8 @@ import (
     "flag"
     "log"
     "net/http"
+    _ "net/http/pprof"
+    "runtime"
     "text/template"
     "time"
 
@@ -16,6 +18,11 @@ import (
 type Index struct {
     Host string
     Scale int
+}
+
+func init() {
+    runtime.SetBlockProfileRate(1)
+    runtime.SetMutexProfileFraction(1)
 }
 
 func main() {
