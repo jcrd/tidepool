@@ -22,8 +22,8 @@ type Env struct {
 
     mutex *sync.RWMutex
     cells []*Cell
-    liveCells map[int32]bool
-    execCells map[int32]bool
+    liveCells map[int32]struct{}
+    execCells map[int32]struct{}
 
     nextCellID chan int64
 
@@ -67,8 +67,8 @@ func NewEnv(width, height, genomeSize, pop int32, seed int64) *Env {
         initPop: pop,
         mutex: &sync.RWMutex{},
         cells: make([]*Cell, width * height),
-        liveCells: make(map[int32]bool),
-        execCells: make(map[int32]bool),
+        liveCells: make(map[int32]struct{}),
+        execCells: make(map[int32]struct{}),
         nextCellID: make(chan int64),
     }
 
@@ -114,7 +114,7 @@ func (e *Env) applyDelta(dt *Delta) {
 
     for _, c := range dt.Cells {
         if c.live() {
-            e.liveCells[c.Idx] = true
+            e.liveCells[c.Idx] = struct{}{}
         } else {
             delete(e.liveCells, c.Idx)
         }
@@ -189,7 +189,7 @@ func (e *Env) getRandomCell(ctx *Context, state int) *Cell {
     e.mutex.RUnlock()
 
     e.mutex.Lock()
-    e.execCells[c.Idx] = true
+    e.execCells[c.Idx] = struct{}{}
     e.mutex.Unlock()
 
     return c
