@@ -26,6 +26,7 @@ func main() {
 
     sig := make(chan os.Signal, 1)
     signal.Notify(sig, os.Interrupt)
+    defer signal.Stop(sig)
 
     for {
         select {
