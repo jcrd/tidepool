@@ -1,4 +1,4 @@
-package petri
+package tidepool
 
 type Stats map[string]int64
 

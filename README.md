@@ -1,6 +1,6 @@
-# petri 🧫
+# tidepool
 
-petri is a digital evolution system and *Golang* library based on [nanopond][np].
+tidepool is a digital evolution system and *Golang* library based on [nanopond][np].
 
 [np]: https://github.com/adamierymenko/nanopond
 

@@ -5,10 +5,10 @@ import (
     "runtime"
     "time"
 
-    "petri"
+    tp "tidepool"
 )
 
-func ParseAndRun() (*petri.Env, <-chan *petri.Delta) {
+func ParseAndRun() (*tp.Env, <-chan *tp.Delta) {
     w := flag.Int("width", 256, "Environment width")
     h := flag.Int("height", 256, "Environment height")
     g := flag.Int("genome", 1024, "Genome size")
@@ -19,9 +19,9 @@ func ParseAndRun() (*petri.Env, <-chan *petri.Delta) {
     flag.Parse()
 
     pop := int32(*p * float64(*w * *h))
-    env := petri.NewEnv(int32(*w), int32(*h), int32(*g), pop, *s)
+    env := tp.NewEnv(int32(*w), int32(*h), int32(*g), pop, *s)
 
-    dts := make(chan *petri.Delta)
+    dts := make(chan *tp.Delta)
 
     go env.Run(runtime.NumCPU(), *t, dts)
 

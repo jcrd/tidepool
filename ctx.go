@@ -1,11 +1,11 @@
 // This project is licensed under the MIT License (see LICENSE).
 
-package petri
+package tidepool
 
 import (
     "math/rand"
 
-    "petri/gene"
+    "tidepool/gene"
 )
 
 type Context struct {

@@ -11,8 +11,8 @@ import (
     "text/template"
     "time"
 
-    "petri/cmd"
-    "petri/web"
+    "tidepool/cmd"
+    "tidepool/web"
 )
 
 type Index struct {

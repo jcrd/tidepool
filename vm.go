@@ -1,9 +1,9 @@
 // This project is licensed under the MIT License (see LICENSE).
 
-package petri
+package tidepool
 
 import (
-    "petri/gene"
+    "tidepool/gene"
 )
 
 const (

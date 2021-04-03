@@ -9,17 +9,17 @@ import (
     "sync"
     "time"
 
-    "petri"
+    tp "tidepool"
 
     "github.com/gorilla/websocket"
 )
 
 type Conn struct {
-    env *petri.Env
-    stats petri.Stats
-    cellMap petri.CellMap
+    env *tp.Env
+    stats tp.Stats
+    cellMap tp.CellMap
     request chan int
-    deltas <-chan *petri.Delta
+    deltas <-chan *tp.Delta
     update <-chan time.Time
 
     upgrader websocket.Upgrader
@@ -34,11 +34,11 @@ type EnvJSON struct {
     ViableCellGeneration int64
 }
 
-func NewConn(e *petri.Env, d <-chan *petri.Delta, u <-chan time.Time) *Conn {
+func NewConn(e *tp.Env, d <-chan *tp.Delta, u <-chan time.Time) *Conn {
     return &Conn{
         env: e,
-        stats: make(petri.Stats),
-        cellMap: make(petri.CellMap),
+        stats: make(tp.Stats),
+        cellMap: make(tp.CellMap),
         request: make(chan int),
         deltas: d,
         update: u,
@@ -120,8 +120,8 @@ func (c *Conn) Run() {
         case id := <-c.request:
             var js []byte
             var err error
-            c.env.WithCells(func(cs []*petri.Cell) {
-                dt := &petri.Delta{
+            c.env.WithCells(func(cs []*tp.Cell) {
+                dt := &tp.Delta{
                     Cells: cs,
                     Stats: c.stats,
                 }
@@ -137,7 +137,7 @@ func (c *Conn) Run() {
             }
             c.mutex.RUnlock()
         case <-c.update:
-            dt := &petri.Delta{
+            dt := &tp.Delta{
                 Cells: c.cellMap.Cells(),
                 Stats: c.stats,
             }
