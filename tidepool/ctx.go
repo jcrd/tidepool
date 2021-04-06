@@ -5,7 +5,7 @@ package tidepool
 import (
     "math/rand"
 
-    "tidepool/gene"
+    "tidepool/tidepool/gene"
 )
 
 type Context struct {

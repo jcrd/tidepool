@@ -5,7 +5,7 @@ import (
     "runtime"
     "time"
 
-    tp "tidepool"
+    tp "tidepool/tidepool"
 )
 
 func ParseAndRun() (*tp.Env, <-chan *tp.Delta) {

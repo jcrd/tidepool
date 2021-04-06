@@ -3,7 +3,7 @@
 package tidepool
 
 import (
-    "tidepool/gene"
+    "tidepool/tidepool/gene"
 )
 
 const genomeStartIdx = 1

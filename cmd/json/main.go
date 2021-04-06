@@ -8,18 +8,8 @@ import (
     "os"
     "os/signal"
 
-    tp "tidepool"
     "tidepool/cmd"
 )
-
-func printDelta(dt *tp.Delta) {
-    json, err := json.Marshal(dt)
-    if err != nil {
-        fmt.Fprintln(os.Stderr, err)
-        os.Exit(1)
-    }
-    fmt.Println(string(json))
-}
 
 func main() {
     env, dts := cmd.ParseAndRun()
@@ -36,7 +26,12 @@ func main() {
             if !ok {
                 return
             }
-            printDelta(dt)
+            json, err := json.Marshal(dt)
+            if err != nil {
+                fmt.Fprintln(os.Stderr, err)
+                os.Exit(1)
+            }
+            fmt.Println(string(json))
         }
     }
 }

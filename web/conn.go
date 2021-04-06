@@ -9,7 +9,7 @@ import (
     "sync"
     "time"
 
-    tp "tidepool"
+    tp "tidepool/tidepool"
 
     "github.com/gorilla/websocket"
 )

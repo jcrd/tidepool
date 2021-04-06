@@ -1,6 +1,13 @@
 BUILDDIR ?= builddir
 
-SRC := gene/genes.go cell.go ctx.go env.go rng.go stats.go vm.go
+LIB := tidepool
+SRC := $(LIB)/gene/genes.go \
+	$(LIB)/cell.go \
+	$(LIB)/ctx.go \
+	$(LIB)/env.go \
+	$(LIB)/rng.go \
+	$(LIB)/stats.go \
+	$(LIB)/vm.go
 
 all: $(BUILDDIR)/json $(BUILDDIR)/web
 
@@ -16,8 +23,8 @@ run-web: $(BUILDDIR)/web
 	$(BUILDDIR)/web -index cmd/web/index.html \
 		-width 32 -height 32 -scale 10
 
-benchmark: env_test.go $(SRC)
-	go test -bench=.
+benchmark: $(LIB)/env_test.go $(SRC)
+	go test ./$(LIB) -bench=.
 
 clean:
 	rm -fr $(BUILDDIR)
