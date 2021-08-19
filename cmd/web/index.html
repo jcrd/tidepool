@@ -1,96 +1,96 @@
 <!doctype html>
 <html>
-<body>
-    <div id="canvas-container"></div>
-    <div>
-        <table id="stats"></table>
-    </div>
-</body>
-<script>
-    const url = "{{.Host}}"
-    const scale = "{{.Scale}}"
+    <body>
+        <div id="canvas-container"></div>
+        <div>
+            <table id="stats"></table>
+        </div>
+    </body>
+    <script>
+        const url = "{{.Host}}"
+        const scale = "{{.Scale}}"
 
-    function updateStat(tbl, n, v) {
-        var stat = document.getElementById(n)
-        if (stat) {
+        function updateStat(tbl, n, v) {
+            var stat = document.getElementById(n)
+            if (stat) {
+                stat.innerHTML = v
+                return
+            }
+
+            var row = tbl.insertRow()
+
+            row.insertCell().innerHTML = n
+
+            stat = row.insertCell()
+            stat.id = n
             stat.innerHTML = v
-            return
         }
 
-        var row = tbl.insertRow()
+        function rgbFromCell(env, cell) {
+            if (cell.Energy == 0 || cell.Generation < env.ViableCellGeneration) {
+                return {r: 0, g: 0, b: 0}
+            }
 
-        row.insertCell().innerHTML = n
+            var str = cell.Genome
+            var hash = 0
+            for (var i = 0; i < str.length; i++) {
+                hash = str.charCodeAt(i) + ((hash << 5) - hash)
+            }
 
-        stat = row.insertCell()
-        stat.id = n
-        stat.innerHTML = v
-    }
-
-    function rgbFromCell(env, cell) {
-        if (cell.Energy == 0 || cell.Generation < env.ViableCellGeneration) {
-            return {r: 0, g: 0, b: 0}
-        }
-
-        var str = cell.Genome
-        var hash = 0
-        for (var i = 0; i < str.length; i++) {
-            hash = str.charCodeAt(i) + ((hash << 5) - hash)
-        }
-
-        return {
-            r: (hash & 0xff0000) >> 16,
-            g: (hash & 0x00ff00) >> 8,
-            b: (hash & 0x0000ff),
-        }
-    }
-
-    function drawCell(ctx, env, cell) {
-        var img = ctx.createImageData(scale, scale)
-        var {r, g, b} = rgbFromCell(env, cell)
-
-        for (var x = 0; x < scale; x++) {
-            for (var y = 0; y < scale; y++) {
-                var i = (y * scale + x) * 4
-                img.data[i] = r
-                img.data[i + 1] = g
-                img.data[i + 2] = b
-                img.data[i + 3] = 255
+            return {
+                r: (hash & 0xff0000) >> 16,
+                g: (hash & 0x00ff00) >> 8,
+                b: (hash & 0x0000ff),
             }
         }
 
-        ctx.putImageData(img, cell.X * scale, cell.Y * scale)
-    }
+        function drawCell(ctx, env, cell) {
+            var img = ctx.createImageData(scale, scale)
+            var {r, g, b} = rgbFromCell(env, cell)
 
-    async function init(ws) {
-        var resp = await fetch("http://" + url + "/env")
-        var env = await resp.json()
-
-        var canvas = document.createElement("canvas")
-        canvas.id = "viewport"
-        canvas.width = env.Width * scale
-        canvas.height = env.Height * scale
-
-        var ctx = canvas.getContext("2d")
-        var tbl = document.getElementById("stats")
-
-        document.getElementById("canvas-container").appendChild(canvas)
-
-        ws.onmessage = function (ev) {
-            var dt = JSON.parse(ev.data)
-
-            updateStat(tbl, "Ticks", dt.Stats["Ticks"])
-            for (var n in dt.Stats) {
-                updateStat(tbl, n, dt.Stats[n])
+            for (var x = 0; x < scale; x++) {
+                for (var y = 0; y < scale; y++) {
+                    var i = (y * scale + x) * 4
+                    img.data[i] = r
+                    img.data[i + 1] = g
+                    img.data[i + 2] = b
+                    img.data[i + 3] = 255
+                }
             }
 
-            for (var i = 0; i < dt.Cells.length; i++) {
-                drawCell(ctx, env, dt.Cells[i])
+            ctx.putImageData(img, cell.X * scale, cell.Y * scale)
+        }
+
+        async function init(ws) {
+            var resp = await fetch("http://" + url + "/env")
+            var env = await resp.json()
+
+            var canvas = document.createElement("canvas")
+            canvas.id = "viewport"
+            canvas.width = env.Width * scale
+            canvas.height = env.Height * scale
+
+            var ctx = canvas.getContext("2d")
+            var tbl = document.getElementById("stats")
+
+            document.getElementById("canvas-container").appendChild(canvas)
+
+            ws.onmessage = function (ev) {
+                var dt = JSON.parse(ev.data)
+
+                updateStat(tbl, "Ticks", dt.Stats["Ticks"])
+                for (var n in dt.Stats) {
+                    updateStat(tbl, n, dt.Stats[n])
+                }
+
+                for (var i = 0; i < dt.Cells.length; i++) {
+                    drawCell(ctx, env, dt.Cells[i])
+                }
             }
         }
-    }
 
-    var ws = new WebSocket("ws://" + url + "/ws")
+        var ws = new WebSocket("ws://" + url + "/ws")
 
-    init(ws)
-</script>
+        init(ws)
+    </script>
 </html>
