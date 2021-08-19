@@ -2,6 +2,8 @@
 
 tidepool is a digital evolution system and *Golang* library based on [nanopond][np].
 
+![](https://github.com/jcrd/tidepool/blob/assets/web_screenshot.png)
+
 [np]: https://github.com/adamierymenko/nanopond
 
 ## Status
