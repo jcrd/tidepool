@@ -29,6 +29,7 @@ func main() {
     update := flag.Duration("update", time.Second, "Delta update frequency")
     addr := flag.String("addr", ":3000", "http service address")
     index := flag.String("index", "index.html", "Path to html index file")
+    static := flag.String("static", "static", "Path to static directory")
     scale := flag.Int("scale", 1, "Scale of cell visualization")
 
     env, dts := cmd.ParseAndRun()
@@ -41,6 +42,9 @@ func main() {
     http.HandleFunc("/env", conn.EnvHandler)
 
     indexTemp := template.Must(template.ParseFiles(*index))
+
+    http.Handle("/static/", http.StripPrefix("/static/",
+        http.FileServer(http.Dir(*static))))
 
     http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
         indexTemp.Execute(w, Index{

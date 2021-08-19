@@ -20,7 +20,9 @@ $(BUILDDIR)/web: cmd/web/main.go $(SRC)
 	go build -o $@ $<
 
 run-web: $(BUILDDIR)/web
-	$(BUILDDIR)/web -index cmd/web/index.html \
+	$(BUILDDIR)/web \
+		-index cmd/web/index.html \
+		-static cmd/web/static \
 		-width 32 -height 32 -scale 10
 
 benchmark: $(LIB)/env_test.go $(SRC)
