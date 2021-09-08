@@ -27,6 +27,7 @@ type Env struct {
 
     nextCellID chan int64
 
+    context context.Context
     Stop context.CancelFunc
 }
 
@@ -82,6 +83,8 @@ func NewEnv(width, height, genomeSize, pop int32, seed int64) *Env {
         y := idx / width
         e.cells[i] = newCell(idx, x, y, genomeSize)
     }
+
+    e.context, e.Stop = context.WithCancel(context.Background())
 
     e.SetConfig(defaultConfig)
     e.SetRNG(defaultRNG)
@@ -275,14 +278,11 @@ func (e *Env) Run(processN int, tick time.Duration, deltas chan<- *Delta) {
     inflow := make(chan int64)
     dts := make(chan *Delta, processN)
 
-    context, stop := context.WithCancel(context.Background())
-    e.Stop = stop
-
     var wg sync.WaitGroup
     wg.Add(processN)
 
     for i := 0; i < processN; i++ {
-        go e.process(&wg, context, exec, inflow, dts)
+        go e.process(&wg, e.context, exec, inflow, dts)
     }
 
     go func() {
@@ -290,7 +290,7 @@ func (e *Env) Run(processN int, tick time.Duration, deltas chan<- *Delta) {
         var id int64 = 1
         for {
             select {
-            case <-context.Done():
+            case <-e.context.Done():
                 return
             default:
                 e.nextCellID <- id
@@ -318,7 +318,7 @@ func (e *Env) Run(processN int, tick time.Duration, deltas chan<- *Delta) {
 
     for {
         select {
-        case <-context.Done():
+        case <-e.context.Done():
             return
         case <-ticker.C:
             ticks++
