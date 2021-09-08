@@ -13,11 +13,19 @@ all: $(BUILDDIR)/json $(BUILDDIR)/web
 
 $(BUILDDIR)/json: cmd/json/main.go $(SRC)
 	mkdir -p $(BUILDDIR)
+ifdef DEBUG
+	go build -race -o $@ $<
+else
 	go build -o $@ $<
+endif
 
 $(BUILDDIR)/web: cmd/web/main.go $(SRC)
 	mkdir -p $(BUILDDIR)
+ifdef DEBUG
+	go build -race -o $@ $<
+else
 	go build -o $@ $<
+endif
 
 run-web: $(BUILDDIR)/web
 	$(BUILDDIR)/web \
