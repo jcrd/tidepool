@@ -39,13 +39,6 @@ type Config struct {
 }
 
 const (
-    dirLeft int = iota
-    dirRight
-    dirUp
-    dirDown
-)
-
-const (
     cellDead = (1 << 0)
     cellLive = (1 << 1)
     cellNonviable = (1 << 2)
@@ -57,6 +50,31 @@ var defaultConfig = Config{
     ViableCellGeneration: 2,
     FailedKillPenalty: 3,
     SeedViableCells: false,
+}
+
+func getIdx(x, y, width int32) int32 {
+	return y*width + x
+}
+
+func getCoords(idx, width int32) (int32, int32) {
+	return idx % width, idx / width
+}
+
+func getNeighbors(idx, width, height int32) (ns [8]int32) {
+	x, y := getCoords(idx, width)
+	i := 0
+
+	for _, w := range [...]int32{width - 1, 0, 1} {
+		for _, h := range [...]int32{height - 1, 0, 1} {
+			if w == 0 && h == 0 {
+				continue
+			}
+			ns[i] = getIdx((x+w)%width, (y+h)%height, width)
+			i++
+		}
+	}
+
+	return ns
 }
 
 func NewEnv(width, height, genomeSize, pop int32, seed int64) *Env {
@@ -199,36 +217,7 @@ func (e *Env) getRandomCell(ctx *Context, state int) *Cell {
 }
 
 func (e *Env) getNeighborIdx(c *Cell, dir int) int32 {
-    x, y := c.X, c.Y
-
-    switch dir {
-    case dirLeft:
-        if x == 0 {
-            x = e.Width - 1
-        } else {
-            x--
-        }
-    case dirRight:
-        if x == e.Width - 1 {
-            x = 0
-        } else {
-            x++
-        }
-    case dirUp:
-        if y == 0 {
-            y = e.Height - 1
-        } else {
-            y--
-        }
-    case dirDown:
-        if y == e.Height - 1 {
-            y = 0
-        } else {
-            y++
-        }
-    }
-
-    return x + e.Width * y
+    return getNeighbors(c.Idx, e.Width, e.Height)[dir]
 }
 
 func (e *Env) process(wg *sync.WaitGroup, context context.Context,

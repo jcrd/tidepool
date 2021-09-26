@@ -158,7 +158,7 @@ func (vm *VM) execGene(c *Cell, g gene.Gene, stats Stats) int {
             }
         }
     case gene.TURN:
-        vm.direction = int(vm.register % 4)
+        vm.direction = int(vm.register % 8)
     case gene.XCHG:
         reg := vm.register
         vm.incGenomeIdx()
