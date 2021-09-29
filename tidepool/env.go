@@ -220,15 +220,15 @@ func (e *Env) getNeighborIdx(c *Cell, dir int) int32 {
     return getNeighbors(c.Idx, e.Width, e.Height)[dir]
 }
 
-func (e *Env) process(wg *sync.WaitGroup, context context.Context,
-    exec <-chan int64, inflow chan int64, dts chan<- *Delta) {
+func (e *Env) process(wg *sync.WaitGroup, exec <-chan int64, inflow chan int64,
+    dts chan<- *Delta) {
     defer wg.Done()
 
     ctx := newContext(e)
 
     for {
         select {
-        case <-context.Done():
+        case <-e.context.Done():
             return
         case ticks := <-inflow:
             var c *Cell
@@ -271,7 +271,7 @@ func (e *Env) Run(processN int, tick time.Duration, deltas chan<- *Delta) {
     wg.Add(processN)
 
     for i := 0; i < processN; i++ {
-        go e.process(&wg, e.context, exec, inflow, dts)
+        go e.process(&wg, exec, inflow, dts)
     }
 
     go func() {
