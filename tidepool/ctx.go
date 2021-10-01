@@ -12,14 +12,12 @@ type Context struct {
     env *Env
     rand *rand.Rand
     vm *VM
-    cellsBuf []int32
 }
 
 func newContext(e *Env) *Context {
     ctx := &Context{
         env: e,
         rand: rand.New(rand.NewSource(e.Seed)),
-        cellsBuf: make([]int32, e.Width * e.Height),
     }
     ctx.vm = newVM(ctx)
 
@@ -32,4 +30,20 @@ func (ctx *Context) getRandomGene() gene.Gene {
 
 func (ctx *Context) getRandomBool() bool {
     return ctx.rand.Intn(2) == 1
+}
+
+func (ctx *Context) seed(nh Neighborhood) *Delta {
+    c := nh[0]
+    c.Energy += ctx.env.GetRNG().Energy(ctx)
+    c.resetMetadata(ctx)
+    c.randomizeGenome(ctx)
+
+    dt := &Delta{
+        Cells: make([]*Cell, 1),
+        Neighborhood: nh,
+        Stats: make(Stats),
+    }
+    dt.Cells[0] = c
+
+    return dt
 }

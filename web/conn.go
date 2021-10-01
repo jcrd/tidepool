@@ -118,17 +118,23 @@ func (c *Conn) Run() {
             }
             c.stats.Add(dt.Stats)
         case id := <-c.request:
-            var js []byte
-            var err error
-            c.env.WithCells(func(cs []*tp.Cell) {
-                dt := &tp.Delta{
-                    Cells: cs,
-                    Stats: c.stats,
+            ret := make(chan []byte)
+            go func() {
+                c.env.WithCells <- func(cs []*tp.Cell) {
+                    dt := &tp.Delta{
+                        Cells: cs,
+                        Stats: c.stats,
+                    }
+                    if js, err := json.Marshal(dt); err == nil {
+                        ret <- js
+                    } else {
+                        log.Println(err)
+                        close(ret)
+                    }
                 }
-                js, err = json.Marshal(dt)
-            })
-            if err != nil {
-                log.Println(err)
+            }()
+            js, ok := <-ret
+            if !ok {
                 break
             }
             c.mutex.RLock()

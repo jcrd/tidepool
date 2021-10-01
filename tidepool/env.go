@@ -4,6 +4,7 @@ package tidepool
 
 import (
     "context"
+    "math/rand"
     "sync"
     "sync/atomic"
     "time"
@@ -20,36 +21,29 @@ type Env struct {
     config atomic.Value
     rng atomic.Value
 
-    mutex *sync.RWMutex
     cells []*Cell
-    liveCells map[int32]struct{}
-    execCells map[int32]struct{}
+    cellsBuf []*Cell
+
+    rand *rand.Rand
 
     nextCellID chan int64
 
     context context.Context
     Stop context.CancelFunc
+
+    WithCells chan func([]*Cell)
 }
 
 type Config struct {
     InflowFrequency int64
     ViableCellGeneration int64
     FailedKillPenalty int64
-    SeedViableCells bool
 }
-
-const (
-    cellDead = (1 << 0)
-    cellLive = (1 << 1)
-    cellNonviable = (1 << 2)
-    cellAny = cellDead | cellLive
-)
 
 var defaultConfig = Config{
     InflowFrequency: 10,
     ViableCellGeneration: 2,
     FailedKillPenalty: 3,
-    SeedViableCells: false,
 }
 
 func getIdx(x, y, width int32) int32 {
@@ -60,39 +54,22 @@ func getCoords(idx, width int32) (int32, int32) {
 	return idx % width, idx / width
 }
 
-func getNeighbors(idx, width, height int32) (ns [8]int32) {
-	x, y := getCoords(idx, width)
-	i := 0
-
-	for _, w := range [...]int32{width - 1, 0, 1} {
-		for _, h := range [...]int32{height - 1, 0, 1} {
-			if w == 0 && h == 0 {
-				continue
-			}
-			ns[i] = getIdx((x+w)%width, (y+h)%height, width)
-			i++
-		}
-	}
-
-	return ns
-}
-
 func NewEnv(width, height, genomeSize, pop int32, seed int64) *Env {
+    if seed < 1 {
+        seed = time.Now().UnixNano()
+    }
+
     e := &Env{
         Width: width,
         Height: height,
         GenomeSize: genomeSize,
         Seed: seed,
         initPop: pop,
-        mutex: &sync.RWMutex{},
         cells: make([]*Cell, width * height),
-        liveCells: make(map[int32]struct{}),
-        execCells: make(map[int32]struct{}),
+        cellsBuf: make([]*Cell, width * height),
+        rand: rand.New(rand.NewSource(seed)),
         nextCellID: make(chan int64),
-    }
-
-    if seed < 1 {
-        e.Seed = time.Now().UnixNano()
+        WithCells: make(chan func([]*Cell)),
     }
 
     for i := range e.cells {
@@ -130,149 +107,145 @@ func (e *Env) getNextCellID() int64 {
     return <-e.nextCellID
 }
 
-func (e *Env) applyDelta(dt *Delta) {
-    e.mutex.Lock()
-
+func (e *Env) applyDelta(dt *Delta, exec Refs, live Refs) {
     for _, c := range dt.Cells {
         if c.live() {
-            e.liveCells[c.Idx] = struct{}{}
+            live.inc(c)
         } else {
-            delete(e.liveCells, c.Idx)
+            live.dec(c)
         }
         e.cells[c.Idx] = c.clone()
-        delete(e.execCells, c.Idx)
+    }
+
+    for _, c := range dt.Neighborhood {
+        exec.dec(c)
     }
 
     var i int64
     config := e.GetConfig()
-    for idx := range e.liveCells {
+    for idx := range live {
         c := e.cells[idx]
         if c.viable(config) {
             i++
         }
     }
     dt.Stats["ViableLiveCells"] = i
-    dt.Stats["LiveCells"] = int64(len(e.liveCells))
-
-    e.mutex.Unlock()
+    dt.Stats["LiveCells"] = int64(len(live))
 }
 
-func (e *Env) GetCell(x, y int32) *Cell {
-    e.mutex.RLock()
-    defer e.mutex.RUnlock()
-    return e.cells[x + e.Width * y].clone()
+func (e *Env) getNeighborhood(c *Cell) (nh Neighborhood) {
+	x, y := getCoords(c.Idx, e.Width)
+    // Center cell is at index 0.
+    nh[0] = e.cells[c.Idx]
+	i := 1
+
+	for _, w := range [...]int32{e.Width - 1, 0, 1} {
+		for _, h := range [...]int32{e.Height - 1, 0, 1} {
+			if w == 0 && h == 0 {
+				continue
+			}
+			nh[i] = e.cells[getIdx((x+w)%e.Width, (y+h)%e.Height, e.Width)]
+			i++
+		}
+	}
+
+	return nh
 }
 
-func (e *Env) GetCellByIdx(idx int32) *Cell {
-    e.mutex.RLock()
-    defer e.mutex.RUnlock()
-    return e.cells[idx].clone()
-}
-
-func (e *Env) getRandomCell(ctx *Context, state int) *Cell {
-    config := e.GetConfig()
-
-    fillBuf := func(idx int32, s int, i *int) {
-        if _, exec := e.execCells[idx]; exec {
-            return
-        }
-        if s & cellLive == 0 {
-            if _, live := e.liveCells[idx]; live {
-                return
-            }
-        }
-        if s & cellNonviable == 1 && e.cells[idx].viable(config) {
-            return
-        }
-        ctx.cellsBuf[*i] = idx
-        *i++
-    }
-
+func (e *Env) getRandomCell(exec Refs) *Cell {
     i := 0
-    e.mutex.RLock()
-
-    if state & cellLive == state {
-        for idx := range e.liveCells {
-            fillBuf(idx, cellLive, &i)
-        }
-    } else {
-        for _, c := range e.cells {
-            fillBuf(c.Idx, state, &i)
+    for _, c := range e.cells {
+        if _, ref := exec[c.Idx]; !ref {
+            e.cellsBuf[i] = c
+            i++
         }
     }
 
-    if i == 0 {
-        e.mutex.RUnlock()
-        return nil
+    return e.cellsBuf[e.rand.Intn(i)]
+}
+
+func (e *Env) getExecNeighborhood(exec Refs) Neighborhood {
+    nh := e.getNeighborhood(e.getRandomCell(exec))
+
+    for i, c := range nh {
+        nh[i] = c.clone()
+        exec.inc(c)
     }
 
-    c := e.cells[ctx.cellsBuf[ctx.rand.Intn(i)]].clone()
-    e.mutex.RUnlock()
-
-    e.mutex.Lock()
-    e.execCells[c.Idx] = struct{}{}
-    e.mutex.Unlock()
-
-    return c
+    return nh
 }
 
-func (e *Env) getNeighborIdx(c *Cell, dir int) int32 {
-    return getNeighbors(c.Idx, e.Width, e.Height)[dir]
-}
+func (e *Env) process(wg *sync.WaitGroup, exec <-chan int64, inflow <-chan int64,
+    execNeighborhoods <-chan Neighborhood, dts chan<- *Delta) {
 
-func (e *Env) process(wg *sync.WaitGroup, exec <-chan int64, inflow chan int64,
-    dts chan<- *Delta) {
     defer wg.Done()
-
     ctx := newContext(e)
+
+    handle := func (fn func(Neighborhood) *Delta, ticks int64) {
+        dt := fn(<-execNeighborhoods)
+        dt.Stats["Ticks"] = ticks
+        dts <- dt
+    }
 
     for {
         select {
         case <-e.context.Done():
             return
         case ticks := <-inflow:
-            var c *Cell
-            if !e.GetConfig().SeedViableCells {
-                if c = e.getRandomCell(ctx, cellAny | cellNonviable); c == nil {
-                    break
-                }
-            } else {
-                c = e.getRandomCell(ctx, cellAny)
-            }
-            dt := c.seed(ctx)
-            dt.Stats["Ticks"] = ticks
-            dts <- dt
+            handle(ctx.seed, ticks)
         case ticks := <-exec:
-            if c := e.getRandomCell(ctx, cellLive); c != nil {
-                dt := c.exec(ctx)
-                dt.Stats["Ticks"] = ticks
-                dts <- dt
-            } else {
-                go func() {
-                    inflow <- ticks
-                }()
-            }
+            handle(ctx.vm.exec, ticks)
         }
     }
-}
-
-func (e *Env) WithCells(f func([]*Cell)) {
-    e.mutex.RLock()
-    defer e.mutex.RUnlock()
-    f(e.cells)
 }
 
 func (e *Env) Run(processN int, tick time.Duration, deltas chan<- *Delta) {
     exec := make(chan int64)
     inflow := make(chan int64)
+    execNeighborhoods := make(chan Neighborhood, processN)
     dts := make(chan *Delta, processN)
+
+    defer close(exec)
+    defer close(inflow)
 
     var wg sync.WaitGroup
     wg.Add(processN)
+    defer wg.Wait()
 
     for i := 0; i < processN; i++ {
-        go e.process(&wg, exec, inflow, dts)
+        go e.process(&wg, exec, inflow, execNeighborhoods, dts)
     }
+
+    go func() {
+        defer close(dts)
+        defer close(execNeighborhoods)
+        defer close(deltas)
+        defer close(e.WithCells)
+
+        execRefs := make(Refs)
+        liveRefs := make(Refs)
+        queued := 0
+
+        for {
+            if queued < processN {
+                queued++
+                nh := e.getExecNeighborhood(execRefs)
+                go func() {
+                    execNeighborhoods <- nh
+                }()
+            }
+            select {
+                case <-e.context.Done():
+                    return
+                case f := <-e.WithCells:
+                    f(e.cells)
+                case dt := <-dts:
+                    queued--
+                    e.applyDelta(dt, execRefs, liveRefs)
+                    deltas <- dt
+            }
+        }
+    }()
 
     go func() {
         defer close(e.nextCellID)
@@ -288,13 +261,6 @@ func (e *Env) Run(processN int, tick time.Duration, deltas chan<- *Delta) {
         }
     }()
 
-    defer close(inflow)
-    defer close(dts)
-    defer close(deltas)
-
-    ticker := time.NewTicker(tick)
-    defer ticker.Stop()
-
     var ticks int64 = 0
 
     inflowTick := e.GetConfig().InflowFrequency
@@ -303,7 +269,8 @@ func (e *Env) Run(processN int, tick time.Duration, deltas chan<- *Delta) {
         inflowTick = e.GetConfig().InflowFrequency
     }
 
-    defer wg.Wait()
+    ticker := time.NewTicker(tick)
+    defer ticker.Stop()
 
     for {
         select {
@@ -320,9 +287,6 @@ func (e *Env) Run(processN int, tick time.Duration, deltas chan<- *Delta) {
                 sendInflow()
             }
             exec <- ticks
-        case dt := <-dts:
-            e.applyDelta(dt)
-            deltas <- dt
         }
     }
 }

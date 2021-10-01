@@ -12,8 +12,6 @@ const (
     VM_CONTINUE
 )
 
-type CellMap map[int32]*Cell
-
 type VM struct {
     ctx *Context
 
@@ -30,34 +28,6 @@ type VM struct {
     buffer gene.Genome
 
     cellMap CellMap
-}
-
-func (cm CellMap) getCell(e *Env, idx int32) *Cell {
-    c, ok := cm[idx]
-    if !ok {
-        c = e.GetCellByIdx(idx)
-    }
-    return c
-}
-
-func (cm CellMap) AddCell(c *Cell) {
-    cm[c.Idx] = c
-}
-
-func (cm CellMap) Reset() {
-    for i := range cm {
-        delete(cm, i)
-    }
-}
-
-func (cm CellMap) Cells() []*Cell {
-    cs := make([]*Cell, len(cm))
-    i := 0
-    for _, c := range cm {
-        cs[i] = c
-        i++
-    }
-    return cs
 }
 
 func newVM(ctx *Context) *VM {
@@ -99,7 +69,8 @@ func (vm *VM) incGenomeIdx() {
     }
 }
 
-func (vm *VM) execGene(c *Cell, g gene.Gene, stats Stats) int {
+func (vm *VM) execGene(nh Neighborhood, g gene.Gene, stats Stats) int {
+    c := nh[0]
     ctx := vm.ctx
     env := ctx.env
 
@@ -166,8 +137,7 @@ func (vm *VM) execGene(c *Cell, g gene.Gene, stats Stats) int {
         c.Genome[vm.genomeIdx] = reg
     case gene.KILL:
         config := env.GetConfig()
-        idx := env.getNeighborIdx(c, vm.direction)
-        n := vm.cellMap.getCell(env, idx)
+        n := vm.cellMap.getNeighbor(nh, vm.direction)
         if n.accessible(ctx, vm.register, gene.KILL) {
             n.resetMetadata(ctx)
             n.resetGenome()
@@ -186,8 +156,7 @@ func (vm *VM) execGene(c *Cell, g gene.Gene, stats Stats) int {
         }
     case gene.SHARE:
         config := env.GetConfig()
-        idx := env.getNeighborIdx(c, vm.direction)
-        n := vm.cellMap.getCell(env, idx)
+        n := vm.cellMap.getNeighbor(nh, vm.direction)
         if n.accessible(ctx, vm.register, gene.SHARE) {
             e := c.Energy + n.Energy
             n.Energy = e / 2
@@ -211,7 +180,8 @@ func (vm *VM) execGene(c *Cell, g gene.Gene, stats Stats) int {
     return VM_NOOP
 }
 
-func (vm *VM) exec(c *Cell) *Delta {
+func (vm *VM) exec(nh Neighborhood) *Delta {
+    c := nh[0]
     ctx := vm.ctx
     env := ctx.env
 
@@ -244,7 +214,7 @@ func (vm *VM) exec(c *Cell) *Delta {
                 continue
             }
         } else {
-            r := vm.execGene(c, g, stats)
+            r := vm.execGene(nh, g, stats)
             if r == VM_BREAK {
                 break
             } else if r == VM_CONTINUE {
@@ -256,8 +226,7 @@ func (vm *VM) exec(c *Cell) *Delta {
     }
 
     if vm.buffer[0] != gene.STOP {
-        idx := env.getNeighborIdx(c, vm.direction)
-        n := vm.cellMap.getCell(env, idx)
+        n := vm.cellMap.getNeighbor(nh, vm.direction)
 
         stats.inc("ReproductionAttempts", 1)
 
@@ -287,6 +256,7 @@ func (vm *VM) exec(c *Cell) *Delta {
 
     return &Delta{
         Cells: vm.cellMap.Cells(),
+        Neighborhood: nh,
         Stats: stats,
     }
 }
