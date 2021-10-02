@@ -109,10 +109,10 @@ func (e *Env) getNextCellID() int64 {
 
 func (e *Env) applyDelta(dt *Delta, exec Refs, live Refs) {
     for _, c := range dt.Cells {
-        if c.live() {
-            live.inc(c)
-        } else {
+        if !c.live() {
             live.dec(c)
+        } else if _, ok := live[c.Idx]; !ok {
+            live.inc(c)
         }
         e.cells[c.Idx] = c.clone()
     }
