@@ -137,6 +137,7 @@ func (c *Conn) Run() {
             if !ok {
                 break
             }
+            close(ret)
             c.mutex.RLock()
             if ch, ok := c.channels[id]; ok {
                 ch <- js
