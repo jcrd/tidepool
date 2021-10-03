@@ -114,7 +114,7 @@ func (e *Env) applyDelta(dt *Delta, exec Refs, live Refs) {
         } else if _, ok := live[c.Idx]; !ok {
             live.inc(c)
         }
-        e.cells[c.Idx] = c.clone()
+        c.overwrite(e.cells[c.Idx])
     }
 
     for _, c := range dt.Neighborhood {

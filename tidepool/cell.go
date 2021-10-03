@@ -135,6 +135,18 @@ func (c *Cell) clone() *Cell {
     return n
 }
 
+func (c *Cell) overwrite(w *Cell) {
+    w.ID = c.ID
+    w.Origin = c.Origin
+    w.Parent = c.Parent
+    w.Generation = c.Generation
+    w.Energy = c.Energy
+
+    for i, v := range c.Genome {
+        w.Genome[i] = v
+    }
+}
+
 func (c *Cell) logo() gene.Gene {
     return c.Genome[0]
 }
