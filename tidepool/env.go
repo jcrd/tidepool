@@ -227,7 +227,6 @@ func (e *Env) Run(processN int, tick time.Duration, deltas chan<- *Delta) {
 
         execRefs := make(Refs)
         liveRefs := make(Refs)
-        queued := 0
 
         for {
             select {
@@ -236,12 +235,10 @@ func (e *Env) Run(processN int, tick time.Duration, deltas chan<- *Delta) {
                 case f := <-e.WithCells:
                     f(e.cells)
                 case dt := <-dts:
-                    queued--
                     e.applyDelta(dt, execRefs, liveRefs)
                     deltas <- dt
                 default:
-                    if queued < processN {
-                        queued++
+                    if len(execNeighborhoods) < processN {
                         nh := e.getExecNeighborhood(execRefs)
                         go func() {
                             execNeighborhoods <- nh
