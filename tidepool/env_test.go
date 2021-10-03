@@ -27,15 +27,19 @@ func BenchmarkJSONMarshalCells(b *testing.B) {
     )
 
     env := NewEnv(w, h, gs, 0, -1)
+    ret := make(chan *Delta)
+    defer close(ret)
 
-    var dt *Delta
-    env.WithCells(func(cs []*Cell) {
-        dt = &Delta{
-            Cells: cs,
-            Stats: stats,
+    go func() {
+        env.WithCells <- func(cs []*Cell) {
+            ret <- &Delta{
+                Cells: cs,
+                Stats: stats,
+            }
         }
-    })
+    }()
 
+    dt := <-ret
     b.ResetTimer()
 
     for i := 0; i < b.N; i++ {
