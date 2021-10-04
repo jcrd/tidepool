@@ -4,6 +4,7 @@ package tidepool
 
 import (
     "context"
+    "errors"
     "math/rand"
     "sync"
     "sync/atomic"
@@ -20,6 +21,8 @@ type Env struct {
 
     config atomic.Value
     rng atomic.Value
+
+    running uint32
 
     cells []*Cell
     cellsBuf []*Cell
@@ -273,9 +276,12 @@ func (e *Env) Run(processN int, tick time.Duration, deltas chan<- *Delta) {
     ticker := time.NewTicker(tick)
     defer ticker.Stop()
 
+    atomic.StoreUint32(&e.running, 1)
+
     for {
         select {
         case <-e.context.Done():
+            atomic.StoreUint32(&e.running, 0)
             return
         case <-ticker.C:
             ticks++
@@ -290,4 +296,11 @@ func (e *Env) Run(processN int, tick time.Duration, deltas chan<- *Delta) {
             exec <- ticks
         }
     }
+}
+
+func (e *Env) GetCells() ([]*Cell, error) {
+    if atomic.LoadUint32(&e.running) == 1 {
+        return nil, errors.New("Env is running")
+    }
+    return e.cells, nil
 }
