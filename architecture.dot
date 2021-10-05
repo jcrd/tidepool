@@ -1,0 +1,29 @@
+digraph ARCHITECTURE {
+    env [shape=box];
+    env -> tick_output_loop;
+    env -> cell_input_loop;
+
+    tick_output_loop -> tick_input_loop [label="inflow_tick",color=blue];
+    tick_output_loop -> tick_input_loop [label="exec_tick",color=crimson];
+
+    subgraph cluster_cell_input_loop {
+        cell_input_loop [style=filled,color=gray];
+        cell_queue [style=filled,color=gold,shape=diamond];
+        cell_input_loop -> cell_queue;
+    }
+
+    subgraph cluster_process {
+        label = "process";
+        style=filled;
+        color=lightblue;
+        context [shape=box];
+        seed [style=filled,color=gold,shape=octagon];
+        vm [style=filled,color=gold,shape=octagon];
+        delta [style=filled,color=gold,shape=box];
+
+        tick_input_loop -> seed [color=blue];
+        tick_input_loop -> vm [color=crimson];
+        cell_queue -> {seed, vm} -> delta -> cell_input_loop;
+        context -> {seed, vm};
+    }
+}
