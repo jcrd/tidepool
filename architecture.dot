@@ -1,7 +1,7 @@
 digraph ARCHITECTURE {
     env [shape=box];
     env -> tick_output_loop;
-    env -> cell_input_loop;
+    env -> cell_processing_loop;
 
     tick_output_loop -> tick_input_loop [label="inflow_tick",color=blue];
     tick_output_loop -> tick_input_loop [label="exec_tick",color=crimson];
